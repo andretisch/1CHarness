@@ -119,22 +119,6 @@
             flex-shrink: 0;
             margin-bottom: 2px;
         }
-        .compose-model {
-            border: 0;
-            background: transparent;
-            color: var(--bs-secondary-color);
-            font-size: 12px;
-            max-width: 150px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding: 6px 4px;
-            border-radius: 8px;
-        }
-        .compose-model:hover {
-            background: rgba(0, 0, 0, 0.05);
-            color: var(--bs-body-color);
-        }
         .compose-send {
             width: 34px;
             height: 34px;
@@ -188,6 +172,13 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .compose-footer-end {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            max-width: 55%;
+        }
         .compose-status {
             text-align: right;
             flex: 1;
@@ -195,6 +186,33 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        .context-meter {
+            flex-shrink: 0;
+            line-height: 0;
+            cursor: help;
+        }
+        .context-ring {
+            display: block;
+            transform: rotate(-90deg);
+        }
+        .context-ring-bg {
+            fill: none;
+            stroke: var(--bs-border-color);
+            stroke-width: 2.5;
+        }
+        .context-ring-fill {
+            fill: none;
+            stroke: var(--bs-primary);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.2s ease, stroke 0.2s ease;
+        }
+        .context-meter.is-warning .context-ring-fill {
+            stroke: var(--bs-warning);
+        }
+        .context-meter.is-danger .context-ring-fill {
+            stroke: var(--bs-danger);
         }
         .compose-status.is-info,
         .compose-status.is-success,
@@ -210,8 +228,7 @@
             background: #f0f0f0;
             color: #111;
         }
-        [data-bs-theme="dark"] .compose-icon-btn:hover,
-        [data-bs-theme="dark"] .compose-model:hover {
+        [data-bs-theme="dark"] .compose-icon-btn:hover {
             background: rgba(255, 255, 255, 0.08);
         }
         #sidebar {
@@ -290,9 +307,6 @@
                         <input type="file" id="fileInput" multiple class="d-none">
                         <textarea class="compose-input" id="chatInput" placeholder="Добавьте сообщение…" rows="1"></textarea>
                         <div class="compose-actions">
-                            <button type="button" class="compose-model" id="composeModelBtn" title="Выбрать модель">
-                                <span id="composeModelLabel">Модель</span> ▾
-                            </button>
                             <button type="button" class="compose-send" id="sendButton" title="Отправить" aria-label="Отправить">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
                             </button>
@@ -300,7 +314,18 @@
                     </div>
                     <div class="compose-footer">
                         <span class="compose-context" id="composeContext">1СХарнесс</span>
-                        <span class="compose-status" id="statusBar"></span>
+                        <div class="compose-footer-end">
+                            <span class="compose-status" id="statusBar"></span>
+                            <span class="context-meter" id="contextMeter" tabindex="0"
+                                data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+                                title="Заполнение контекстного окна">
+                                <svg class="context-ring" width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+                                    <circle class="context-ring-bg" cx="11" cy="11" r="9"></circle>
+                                    <circle class="context-ring-fill" id="contextRingFill" cx="11" cy="11" r="9"
+                                        stroke-dasharray="56.55" stroke-dashoffset="56.55"></circle>
+                                </svg>
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -346,7 +371,8 @@
                         </div>
                         <div class="tab-pane fade" id="tab-generation" role="tabpanel">
                             <div class="mb-3"><label for="temperature" class="form-label">Температура</label><input type="number" class="form-control" id="temperature" min="0" max="2" step="0.1" value="0.7"><div class="form-text">Чем выше, тем разнообразнее ответ.</div></div>
-                            <div class="mb-3"><label for="nPredict" class="form-label">Макс. токенов</label><input type="number" class="form-control" id="nPredict" min="1" step="1" value="2048"><div class="form-text">Лимит длины ответа модели.</div></div>
+                            <div class="mb-3"><label for="nPredict" class="form-label">Макс. токенов ответа</label><input type="number" class="form-control" id="nPredict" min="1" step="1" value="2048"><div class="form-text">Лимит длины ответа модели.</div></div>
+                            <div class="mb-3"><label for="contextWindow" class="form-label">Размер контекста</label><input type="number" class="form-control" id="contextWindow" min="1024" step="1024" value="32768"><div class="form-text">Для индикатора заполнения под полем ввода (токены).</div></div>
                             <div class="mb-3"><label for="topP" class="form-label">Top P</label><input type="number" class="form-control" id="topP" min="0" max="1" step="0.01" value="0.95"></div>
                             <div class="mb-3"><label for="topK" class="form-label">Top K</label><input type="number" class="form-control" id="topK" min="1" step="1" value="40"></div>
                             <div class="mb-0"><label for="stopSequences" class="form-label">Стоп-последовательности</label><input type="text" class="form-control" id="stopSequences" value="USER:, \nUSER:, <|user|>"><div class="form-text">Через запятую.</div></div>
@@ -376,6 +402,7 @@
             themeSwitcher: document.getElementById('themeSwitcher'),
             temperature: document.getElementById('temperature'),
             nPredict: document.getElementById('nPredict'),
+            contextWindow: document.getElementById('contextWindow'),
             topP: document.getElementById('topP'),
             topK: document.getElementById('topK'),
             stopSequences: document.getElementById('stopSequences'),
@@ -391,10 +418,14 @@
             refreshModelsBtn: document.getElementById('refreshModelsBtn'),
             sidebar: document.getElementById('sidebar'),
             highlightTheme: document.getElementById('highlight-theme'),
-            composeModelBtn: document.getElementById('composeModelBtn'),
-            composeModelLabel: document.getElementById('composeModelLabel'),
-            composeContext: document.getElementById('composeContext')
+            composeContext: document.getElementById('composeContext'),
+            contextMeter: document.getElementById('contextMeter'),
+            contextRingFill: document.getElementById('contextRingFill')
         };
+        const CONTEXT_RING_CIRCUMFERENCE = 2 * Math.PI * 9;
+        const DEMO_SEED_VERSION = '2026-03-26';
+        const DEMO_SEED_FLAG = `llamaDemoSeed_${DEMO_SEED_VERSION}`;
+        let contextMeterTooltip = null;
         const SEND_BUTTON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>';
         let chatHistory = [];
         let messageCounter = 0;
@@ -422,15 +453,197 @@
         function initialize() {
             sidebarInstance = new bootstrap.Offcanvas(elements.sidebar);
             loadServerUrl();
+            loadGenerationSettings();
             setupEventListeners();
             initializeTheme();
             configureMarked();
+            initContextMeterTooltip();
             validateServerUrl();
             refreshModels();
+            const demoMode = isDemoMode();
+            if (demoMode) seedDemoSessionsIfNeeded();
             populateSessions();
-            startNewSession();
+            if (demoMode) {
+                const sessions = getSessionIndex();
+                if (sessions.length) openSessionSilently(sessions[0].id);
+                else startNewSession();
+            } else {
+                startNewSession();
+            }
             updateSendButtonState();
             updateComposeContext();
+            updateContextMeter();
+        }
+        function isDemoMode() {
+            const params = new URLSearchParams(window.location.search);
+            return params.has('demo') || window.location.hash === '#demo';
+        }
+        function loadGenerationSettings() {
+            const savedCtx = localStorage.getItem('llamaContextWindow');
+            if (savedCtx && elements.contextWindow) elements.contextWindow.value = savedCtx;
+        }
+        function saveContextWindowSetting() {
+            if (elements.contextWindow) {
+                localStorage.setItem('llamaContextWindow', elements.contextWindow.value);
+            }
+        }
+        function getContextWindowLimit() {
+            const n = parseInt(elements.contextWindow?.value, 10);
+            return Number.isFinite(n) && n > 0 ? n : 32768;
+        }
+        function estimateTokens(text) {
+            if (!text) return 0;
+            return Math.ceil(String(text).length / 3.5);
+        }
+        function estimateContextUsageTokens() {
+            let total = 0;
+            chatHistory.forEach(m => { total += estimateTokens(m.content); });
+            total += estimateTokens(elements.chatInput.value);
+            stagedFiles.forEach(f => {
+                if (f.content && typeof f.content === 'string' && !f.content.startsWith('data:')) {
+                    total += estimateTokens(f.content);
+                }
+            });
+            return total;
+        }
+        function initContextMeterTooltip() {
+            if (!elements.contextMeter) return;
+            contextMeterTooltip = bootstrap.Tooltip.getOrCreateInstance(elements.contextMeter, {
+                trigger: 'hover focus',
+                customClass: 'context-meter-tooltip'
+            });
+        }
+        function updateContextMeter() {
+            if (!elements.contextRingFill || !elements.contextMeter) return;
+            const used = estimateContextUsageTokens();
+            const limit = getContextWindowLimit();
+            const ratio = limit > 0 ? Math.min(1, used / limit) : 0;
+            const offset = CONTEXT_RING_CIRCUMFERENCE * (1 - ratio);
+            elements.contextRingFill.setAttribute('stroke-dasharray', String(CONTEXT_RING_CIRCUMFERENCE));
+            elements.contextRingFill.setAttribute('stroke-dashoffset', String(offset));
+            elements.contextMeter.classList.remove('is-warning', 'is-danger');
+            if (ratio >= 0.9) elements.contextMeter.classList.add('is-danger');
+            else if (ratio >= 0.7) elements.contextMeter.classList.add('is-warning');
+            const pct = Math.round(ratio * 100);
+            const tip = `<strong>Контекст: ~${used.toLocaleString('ru-RU')} / ${limit.toLocaleString('ru-RU')} токенов</strong> (${pct}%)<br>`
+                + 'Учитываются сообщения диалога, черновик в поле ввода и текст вложений. '
+                + 'Кольцо показывает, насколько близко к лимиту контекстного окна модели. '
+                + 'Размер окна задаётся в <em>Настройки → Генерация → Размер контекста</em>.';
+            elements.contextMeter.setAttribute('data-bs-original-title', tip);
+            elements.contextMeter.setAttribute('title', tip);
+            if (contextMeterTooltip) contextMeterTooltip.setContent({ '.tooltip-inner': tip });
+        }
+        function seedDemoSessionsIfNeeded() {
+            const params = new URLSearchParams(window.location.search);
+            const force = params.get('demo') === 'reset' || params.get('demo') === 'fresh';
+            if (!force && localStorage.getItem(DEMO_SEED_FLAG) === '1') return;
+            getSessionIndex().forEach(s => localStorage.removeItem(`${SESSION_DATA_PREFIX}${s.id}`));
+            saveSessionIndex([]);
+            const now = Date.now();
+            const demos = [
+                {
+                    id: `demo-${now}-1`,
+                    name: 'Обороты по счёту 51',
+                    updatedAt: now,
+                    history: [
+                        { role: 'user', content: 'Сформируй обороты по счёту 51 за март 2026 по организациям. Нужна таблица: организация, начальный остаток, приход, расход, конечный остаток.', id: 'demo-u1' },
+                        { role: 'model', content: `Сделал запрос к регистру бухгалтерии и свёл по **Организация**.
+
+| Организация | Начало | Приход | Расход | Конец |
+| --- | ---: | ---: | ---: | ---: |
+| ООО «Ромашка» | 1 240 000 | 890 000 | 720 000 | 1 410 000 |
+| ИП Иванов | 85 000 | 120 000 | 95 000 | 110 000 |
+
+Фрагмент запроса, который ушёл в 1С:
+
+\`\`\`bsl
+ВЫБРАТЬ
+    Организация.Наименование КАК Организация,
+    СУММА(НачальныйОстаток) КАК Начало,
+    СУММА(ОборотДт) КАК Приход,
+    СУММА(ОборотКт) КАК Расход,
+    СУММА(КонечныйОстаток) КАК Конец
+ИЗ
+    РегистрБухгалтерии.Хозрасчетный.ОстаткиИОбороты(, , Месяц, , Счет = &Счет51) КАК Д
+СГРУППИРОВАТЬ ПО
+    Организация.Наименование
+\`\`\`
+
+Могу выгрузить в Excel или добавить фильтр по подразделению.`, id: 'demo-m1' }
+                    ]
+                },
+                {
+                    id: `demo-${now}-2`,
+                    name: 'Медленный запрос Номенклатура',
+                    updatedAt: now - 60000,
+                    history: [
+                        { role: 'user', content: 'Почему отчёт «Остатки номенклатуры» считается 40 секунд? Конфигурация УТ 11.', id: 'demo-u2' },
+                        { role: 'model', content: `По журналу выполнения вижу три узких места:
+
+1. **Полное сканирование** регистра \`ТоварыНаСкладах\` без отбора по складу.
+2. **Соединение** с справочником номенклатуры по строковому артикулу вместо ссылки.
+3. **RLS** — для пользователя «Менеджер» включён отбор по 1200 группам доступа.
+
+Рекомендации:
+- добавить обязательный параметр «Склад»;
+- заменить соединение на \`Номенклатура.Ссылка\`;
+- включить **итоги** по измерению «Склад».
+
+> После правки типовый прогон на тестовой базе: **4,2 с** вместо 40 с.
+
+Нужно подготовить патч обработки или только текст для разработчика?`, id: 'demo-m2' }
+                    ]
+                },
+                {
+                    id: `demo-${now}-3`,
+                    name: 'Анонимизация перед LLM',
+                    updatedAt: now - 120000,
+                    history: [
+                        { role: 'user', content: 'Перед отправкой в модель нужно скрыть ИНН и телефоны в тексте вложения. Покажи как это будет выглядеть.', id: 'demo-u3' },
+                        { role: 'model', content: `В 1СХарнесс включён слой **анонимизации** (маски вместо PII):
+
+**Было:**
+\`\`\`text
+Контрагент ООО Вектор, ИНН 7701234567, tel +7 (495) 123-45-67
+\`\`\`
+
+**Уходит в LLM:**
+\`\`\`text
+Контрагент {{ORG_1}}, ИНН {{INN_1}}, tel {{PHONE_1}}
+\`\`\`
+
+Обратная подстановка выполняется только на стороне 1С при показе пользователю; в логах хранятся уже замаскированные значения.
+
+\`\`\`bsl
+Функция Анонимизировать(Текст, СоответствиеМасок)
+    // … поиск по шаблонам ИНН, телефон, email …
+    Возврат Новый Структура("Текст, Карта", Текст, СоответствиеМасок);
+КонецФункции
+\`\`\`
+
+Стриминг ответа при включённой анонимизации пока отключён — это отражено в ТЗ.`, id: 'demo-m3' }
+                    ]
+                }
+            ];
+            const index = demos.map(d => ({ id: d.id, name: d.name, updatedAt: d.updatedAt }));
+            demos.forEach(d => {
+                localStorage.setItem(`${SESSION_DATA_PREFIX}${d.id}`, JSON.stringify(d.history));
+            });
+            saveSessionIndex(index);
+            localStorage.setItem(DEMO_SEED_FLAG, '1');
+            showStatus('Демо-диалоги загружены. Переключайте чаты слева и тему 🌙.', 'info');
+        }
+        function openSessionSilently(sessionId) {
+            try {
+                const historyJson = localStorage.getItem(`${SESSION_DATA_PREFIX}${sessionId}`);
+                chatHistory = JSON.parse(historyJson) || [];
+                messageCounter = chatHistory.length;
+                currentSessionId = sessionId;
+                renderChatHistory();
+                populateSessions();
+            } catch {
+                startNewSession();
+            }
         }
         function configureMarked() {
             marked.setOptions({
@@ -453,15 +666,19 @@
                 closeMobileSidebar();
             });
             elements.themeSwitcher.addEventListener('click', toggleTheme);
-            elements.composeModelBtn.addEventListener('click', () => {
-                bootstrap.Modal.getOrCreateInstance(elements.settingsModal).show();
-                bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-models-btn')).show();
-            });
             elements.rememberServerUrl.addEventListener('change', handleRememberUrlChange);
+            if (elements.contextWindow) {
+                elements.contextWindow.addEventListener('change', () => {
+                    saveContextWindowSetting();
+                    updateContextMeter();
+                });
+                elements.contextWindow.addEventListener('input', updateContextMeter);
+            }
             elements.serverUrl.addEventListener('input', handleServerUrlInput);
             elements.chatInput.addEventListener('input', () => {
                 updateSendButtonState();
                 autoResizeTextarea(elements.chatInput);
+                updateContextMeter();
             });
             elements.chatInput.addEventListener('keydown', (event) => {
                 if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.shiftKey) {
@@ -619,6 +836,7 @@
                 elements.stagedFilesArea.appendChild(item);
             });
             updateSendButtonState();
+            updateContextMeter();
         }
         function setSendButtonMode(mode) {
             if (mode === 'stop') {
@@ -637,10 +855,12 @@
             if (!elements.composeContext) return;
             if (!currentSessionId) {
                 elements.composeContext.textContent = chatHistory.length ? 'Черновик' : '1СХарнесс';
+                updateContextMeter();
                 return;
             }
             const session = getSessionIndex().find(s => s.id === currentSessionId);
             elements.composeContext.textContent = session ? session.name : '1СХарнесс';
+            updateContextMeter();
         }
         function handleRemoveStagedFile(event) {
             if (event.target.matches('[data-index]')) {
@@ -973,11 +1193,6 @@
             }
             elements.activeModelLabel.textContent = text;
             elements.activeModelLabel.title = text;
-            if (elements.composeModelLabel) {
-                const short = text.length > 22 ? `${text.slice(0, 21)}…` : text;
-                elements.composeModelLabel.textContent = short;
-                elements.composeModelBtn.title = text;
-            }
         }
         async function refreshModels() {
             try {
@@ -1067,11 +1282,6 @@
             elements.modelsNote.textContent = 'Сервер в режиме одной модели: загрузка и выгрузка из браузера недоступны. Для переключения моделей запустите llama-server в router mode.';
             elements.activeModelLabel.textContent = current || '—';
             elements.activeModelLabel.title = current || '';
-            if (elements.composeModelLabel) {
-                const label = current || 'Модель';
-                elements.composeModelLabel.textContent = label.length > 22 ? `${label.slice(0, 21)}…` : label;
-                elements.composeModelBtn.title = label;
-            }
         }
         async function pollModelStatus(id, want, timeoutMs = 180000) {
             const start = Date.now();
@@ -1226,6 +1436,7 @@
                 currentSessionId = sessionId;
                 renderChatHistory();
                 populateSessions();
+                updateContextMeter();
                 showStatus("Чат открыт.", "info");
             } catch (e) {
                 showStatus("Не удалось открыть чат.", "danger");
