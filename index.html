@@ -710,7 +710,7 @@
         function handleCopyCodeClick(button) {
             const code = button.closest('pre')?.querySelector('code')?.textContent || '';
             navigator.clipboard.writeText(code).then(() => {
-                button.textContent = 'Copied!';
+                button.textContent = 'Скопировано';
                 button.classList.add('copied');
                 setTimeout(() => {
                     button.textContent = 'Копировать';
