@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LlamaHTML </title>
+    <title>1СХарнесс</title>
     <link href="vendor/bootstrap/5.3.3/bootstrap.min.css" rel="stylesheet">
     <link href="vendor/theme/1c-taxi.css" rel="stylesheet">
     <script src="vendor/marked/marked.min.js"></script>
@@ -68,6 +68,37 @@
         #sidebar {
             transition: transform .3s ease-in-out, width .3s ease-in-out;
         }
+        #sessionsList {
+            overflow-y: auto;
+            min-height: 0;
+        }
+        .session-row .session-open {
+            text-decoration: none;
+            color: inherit;
+            border: 0;
+            border-radius: 0;
+        }
+        .session-row .session-open:hover,
+        .session-row .session-open:focus {
+            background: rgba(0, 0, 0, 0.04);
+        }
+        .session-menu {
+            text-decoration: none;
+            line-height: 1;
+            font-size: 1.25rem;
+            letter-spacing: -0.05em;
+            opacity: 0.55;
+        }
+        .session-menu:hover,
+        .session-menu.show {
+            opacity: 1;
+        }
+        .list-group-item.active .session-menu {
+            opacity: 0.85;
+        }
+        .dropdown-menu .dropdown-item.text-danger {
+            color: var(--bs-danger) !important;
+        }
     </style>
 </head>
 <body>
@@ -79,38 +110,26 @@
         </button>
         <aside class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary offcanvas-md offcanvas-start" tabindex="-1" id="sidebar" style="width: 280px;">
             <div class="offcanvas-header">
-                <h5 class="offcanvas-title">LlamaHTML Menu</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Close"></button>
+                <h5 class="offcanvas-title">1СХарнесс</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Закрыть"></button>
             </div>
-            <div class="d-grid gap-2 mb-3" id="sidebar-header">
-                <button class="btn btn-primary" id="newChatBtn">New chat</button>
-                <button class="btn btn-outline-primary" id="saveSessionButton">Save Chat</button>
+            <div class="d-grid gap-2 mb-2" id="sidebar-header">
+                <button class="btn btn-primary" type="button" id="newChatBtn">Новый чат</button>
             </div>
-            <div class="list-group list-group-flush border-bottom scrollarea flex-grow-1" id="sessionsList">
-            </div>
-            <div class="mt-3">
-                <div class="server-config mb-3">
-                    <input type="url" class="form-control" id="serverUrl" placeholder="Server URL" value="http://127.0.0.1:8080">
-                </div>
-                <div class="model-config mb-3">
-                    <div class="small text-body-secondary mb-1">Model</div>
-                    <div class="small text-truncate mb-2" id="activeModelLabel">—</div>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-outline-secondary" id="modelsBtn" data-bs-toggle="modal" data-bs-target="#modelsModal">Manage Models</button>
-                    </div>
-                </div>
-                <div class="d-grid gap-2">
-                    <button class="btn btn-outline-secondary" id="settingsBtn" data-bs-toggle="modal" data-bs-target="#settingsModal">Settings</button>
-                    <button class="btn btn-outline-secondary" id="themeSwitcher">🌙</button>
-                </div>
+            <div class="small text-body-secondary px-1 mb-2">Недавние</div>
+            <div class="list-group list-group-flush border-bottom flex-grow-1 mb-2" id="sessionsList"></div>
+            <div class="mt-auto pt-2 d-grid gap-2">
+                <button class="btn btn-outline-secondary" type="button" id="settingsBtn" data-bs-toggle="modal" data-bs-target="#settingsModal">Настройки</button>
+                <button class="btn btn-outline-secondary" type="button" id="themeSwitcher" title="Сменить тему">🌙</button>
             </div>
         </aside>
         <main class="main-content flex-grow-1 d-flex flex-column">
             <div class="chat-container p-3" id="chatContainer">
-                <div class="empty-state text-center h-100 d-flex flex-column justify-content-center align-items-center">
-                    <div>
-                        <h2>LlamaHTML</h2>
-                        <p class="lead text-body-secondary">Start a conversation with your local Llama model</p>
+                <div class="empty-state text-center h-100 d-flex flex-column justify-content-center align-items-center px-3">
+                    <div style="max-width: 32rem;">
+                        <h2 class="mb-2">1СХарнесс</h2>
+                        <p class="lead mb-2">ИИ-агент на платформе 1С:Предприятие</p>
+                        <p class="text-body-secondary mb-0">Запросы, отчёты и инструменты выполняются через 1С. Напишите сообщение или нажмите «Новый чат».</p>
                     </div>
                 </div>
             </div>
@@ -119,10 +138,10 @@
                     <div id="stagedFilesArea" class="d-flex flex-wrap gap-2 mb-2" style="display: none;">
                     </div>
                     <div class="input-group">
-                        <textarea class="form-control" id="chatInput" placeholder="Message Llama..." rows="1"></textarea>
-                        <label for="fileInput" class="btn btn-outline-secondary" title="Attach files">📎</label>
+                        <textarea class="form-control" id="chatInput" placeholder="Сообщение… Ctrl+Enter — отправить" rows="1"></textarea>
+                        <label for="fileInput" class="btn btn-outline-secondary" title="Прикрепить файлы">📎</label>
                         <input type="file" id="fileInput" multiple class="d-none">
-                        <button class="btn btn-primary" id="sendButton">Send</button>
+                        <button class="btn btn-primary" type="button" id="sendButton">Отправить</button>
                     </div>
                     <div class="status-bar text-center text-body-secondary small mt-2" id="statusBar"></div>
                 </div>
@@ -130,37 +149,54 @@
         </main>
     </div>
     <div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="settingsModalLabel">Settings</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="settingsModalLabel">Настройки</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3"><label for="temperature" class="form-label">Temperature</label><input type="number" class="form-control" id="temperature" min="0" max="2" step="0.1" value="0.7"><small class="form-text text-muted">Controls randomness.</small></div>
-                    <div class="mb-3"><label for="nPredict" class="form-label">Max Tokens</label><input type="number" class="form-control" id="nPredict" min="1" step="1" value="2048"><small class="form-text text-muted">Max tokens to generate.</small></div>
-                    <div class="mb-3"><label for="topP" class="form-label">Top P</label><input type="number" class="form-control" id="topP" min="0" max="1" step="0.01" value="0.95"><small class="form-text text-muted">Nucleus sampling.</small></div>
-                    <div class="mb-3"><label for="topK" class="form-label">Top K</label><input type="number" class="form-control" id="topK" min="1" step="1" value="40"><small class="form-text text-muted">Top-k sampling.</small></div>
-                    <div class="mb-3"><label for="stopSequences" class="form-label">Stop Sequences</label><input type="text" class="form-control" id="stopSequences" value="USER:, \nUSER:, <|user|>"><small class="form-text text-muted">Comma-separated strings.</small></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="rememberServerUrl"><label class="form-check-label" for="rememberServerUrl">Remember Server URL</label></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="modal fade" id="modelsModal" tabindex="-1" aria-labelledby="modelsModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modelsModalLabel">Models</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="modelsList"></div>
-                    <div id="modelsNote" class="small text-body-secondary mt-2"></div>
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tab-connection-btn" data-bs-toggle="tab" data-bs-target="#tab-connection" type="button" role="tab">Подключение</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-models-btn" data-bs-toggle="tab" data-bs-target="#tab-models" type="button" role="tab">Модели</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-generation-btn" data-bs-toggle="tab" data-bs-target="#tab-generation" type="button" role="tab">Генерация</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content pt-3">
+                        <div class="tab-pane fade show active" id="tab-connection" role="tabpanel">
+                            <div class="mb-3">
+                                <label for="serverUrl" class="form-label">Адрес LLM-сервера</label>
+                                <input type="url" class="form-control" id="serverUrl" placeholder="http://127.0.0.1:8080" value="http://127.0.0.1:8080">
+                                <div class="form-text">Сейчас используется протокол llama-server (<code>/completion</code>).</div>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="rememberServerUrl">
+                                <label class="form-check-label" for="rememberServerUrl">Запомнить адрес</label>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tab-models" role="tabpanel">
+                            <div class="mb-2 small text-body-secondary">Активная модель</div>
+                            <div class="mb-3 text-truncate fw-semibold" id="activeModelLabel">—</div>
+                            <div id="modelsList"></div>
+                            <div id="modelsNote" class="small text-body-secondary mt-2"></div>
+                            <button class="btn btn-outline-secondary btn-sm mt-2" type="button" id="refreshModelsBtn">Обновить список</button>
+                        </div>
+                        <div class="tab-pane fade" id="tab-generation" role="tabpanel">
+                            <div class="mb-3"><label for="temperature" class="form-label">Температура</label><input type="number" class="form-control" id="temperature" min="0" max="2" step="0.1" value="0.7"><div class="form-text">Чем выше, тем разнообразнее ответ.</div></div>
+                            <div class="mb-3"><label for="nPredict" class="form-label">Макс. токенов</label><input type="number" class="form-control" id="nPredict" min="1" step="1" value="2048"><div class="form-text">Лимит длины ответа модели.</div></div>
+                            <div class="mb-3"><label for="topP" class="form-label">Top P</label><input type="number" class="form-control" id="topP" min="0" max="1" step="0.01" value="0.95"></div>
+                            <div class="mb-3"><label for="topK" class="form-label">Top K</label><input type="number" class="form-control" id="topK" min="1" step="1" value="40"></div>
+                            <div class="mb-0"><label for="stopSequences" class="form-label">Стоп-последовательности</label><input type="text" class="form-control" id="stopSequences" value="USER:, \nUSER:, <|user|>"><div class="form-text">Через запятую.</div></div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-outline-secondary" id="refreshModelsBtn">Refresh</button>
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Готово</button>
                 </div>
             </div>
         </div>
@@ -168,7 +204,9 @@
     <script src="vendor/bootstrap/5.3.3/bootstrap.bundle.min.js"></script>
     <script>
         const SESSION_INDEX_KEY = 'llamaChatIndex';
+        const SESSION_ARCHIVE_KEY = 'llamaChatArchive';
         const SESSION_DATA_PREFIX = 'llamaChatSession_';
+        const DEFAULT_SESSION_NAME = 'Новый чат';
         const MAX_TEXT_FILE_EMBED_SIZE = 200 * 1024;
         const elements = {
             serverUrl: document.getElementById('serverUrl'),
@@ -185,13 +223,11 @@
             stopSequences: document.getElementById('stopSequences'),
             sessionsList: document.getElementById('sessionsList'),
             newChatBtn: document.getElementById('newChatBtn'),
-            saveSessionButton: document.getElementById('saveSessionButton'),
             fileInput: document.getElementById('fileInput'),
             stagedFilesArea: document.getElementById('stagedFilesArea'),
             settingsBtn: document.getElementById('settingsBtn'),
             settingsModal: document.getElementById('settingsModal'),
             activeModelLabel: document.getElementById('activeModelLabel'),
-            modelsModal: document.getElementById('modelsModal'),
             modelsList: document.getElementById('modelsList'),
             modelsNote: document.getElementById('modelsNote'),
             refreshModelsBtn: document.getElementById('refreshModelsBtn'),
@@ -249,7 +285,6 @@
                 if (currentAbortController) handleStopGeneration();
                 else handleSendPrompt();
             });
-            elements.saveSessionButton.addEventListener('click', handleSaveSession);
             elements.newChatBtn.addEventListener('click', () => {
                 startNewSession();
                 closeMobileSidebar();
@@ -277,17 +312,29 @@
             });
             elements.modelsList.addEventListener('click', handleModelAction);
             elements.refreshModelsBtn.addEventListener('click', refreshModels);
-            elements.modelsModal.addEventListener('shown.bs.modal', refreshModels);
-            elements.modelsModal.addEventListener('hidden.bs.modal', () => clearTimeout(modelsPollTimer));
+            elements.settingsModal.addEventListener('shown.bs.modal', refreshModels);
+            elements.settingsModal.addEventListener('hidden.bs.modal', () => clearTimeout(modelsPollTimer));
             elements.sessionsList.addEventListener('click', function(event) {
-                const sessionItem = event.target.closest('.list-group-item');
-                const deleteBtn = event.target.closest('.delete-btn');
-                if (deleteBtn && sessionItem) {
+                const actionBtn = event.target.closest('[data-session-action]');
+                if (actionBtn) {
+                    event.preventDefault();
                     event.stopPropagation();
-                    handleDeleteSession(sessionItem.dataset.sessionId);
-                } else if (sessionItem) {
-                    handleLoadSession(sessionItem.dataset.sessionId);
-                    closeMobileSidebar();
+                    const row = actionBtn.closest('[data-session-id]');
+                    if (!row) return;
+                    const sessionId = row.dataset.sessionId;
+                    const action = actionBtn.dataset.sessionAction;
+                    if (action === 'rename') handleRenameSession(sessionId);
+                    else if (action === 'archive') handleArchiveSession(sessionId);
+                    else if (action === 'delete') handleDeleteSession(sessionId);
+                    return;
+                }
+                const openBtn = event.target.closest('.session-open');
+                if (openBtn) {
+                    const row = openBtn.closest('[data-session-id]');
+                    if (row) {
+                        handleLoadSession(row.dataset.sessionId);
+                        closeMobileSidebar();
+                    }
                 }
             });
         }
@@ -328,9 +375,9 @@
         function validateServerUrl() {
             const serverUrl = elements.serverUrl.value.trim();
             if (!isValidHttpUrl(serverUrl)) {
-                showStatus("Invalid server URL format.", "danger");
+                showStatus("Неверный формат адреса сервера.", "danger");
             } else {
-                showStatus("Server URL looks valid. Ready to send.", "info");
+                showStatus("Адрес сервера принят.", "info");
             }
             updateSendButtonState();
         }
@@ -357,7 +404,7 @@
             if (!files) return;
             showLoading(true, "Processing files...");
             const newFiles = Array.from(files).filter(f => !stagedFiles.some(sf => sf.name === f.name));
-            if (newFiles.length !== files.length) showStatus("Duplicate filenames were ignored.", "warning");
+            if (newFiles.length !== files.length) showStatus("Файлы с одинаковыми именами пропущены.", "warning");
             if (newFiles.length === 0) {
                 showLoading(false);
                 return;
@@ -425,7 +472,7 @@
             elements.fileInput.value = null;
         }
         async function handleSendPrompt() {
-            elements.sendButton.innerHTML = `<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span> Stop`;
+            elements.sendButton.innerHTML = `<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span> Стоп`;
             elements.sendButton.classList.replace('btn-primary', 'btn-danger');
             elements.chatInput.disabled = true;
             const serverUrl = elements.serverUrl.value.trim();
@@ -436,14 +483,14 @@
             const topK = parseInt(elements.topK.value, 10);
             const stopSequences = elements.stopSequences.value.split(',').map(s => s.trim()).filter(Boolean);
             if (!promptText && stagedFiles.length === 0) {
-                showStatus("Message cannot be empty.", "warning");
+                showStatus("Сообщение не может быть пустым.", "warning");
                 resetButtonToSendState();
                 elements.chatInput.disabled = false;
                 return;
             }
             const filesWithError = stagedFiles.filter(f => f.error);
             if (filesWithError.length > 0) {
-                showStatus(`Cannot send due to errors reading files: ${filesWithError.map(f => f.name).join(', ')}`, "danger");
+                showStatus(`Ошибка чтения файлов: ${filesWithError.map(f => f.name).join(', ')}`, "danger");
                 resetButtonToSendState();
                 elements.chatInput.disabled = false;
                 return;
@@ -468,11 +515,12 @@
             currentAbortController = new AbortController();
             const userMessage = { role: 'user', content: fullUserContent, id: `msg-${messageCounter++}` };
             chatHistory.push(userMessage);
+            persistCurrentSession();
             renderChatHistory();
             elements.chatInput.value = '';
             autoResizeTextarea(elements.chatInput);
             clearStagedFiles();
-            showLoading(true, "Connecting...");
+            showLoading(true, "Подключение…");
             const modelMessage = { role: 'model', content: '', id: `msg-${messageCounter++}` };
             chatHistory.push(modelMessage);
             renderChatHistory();
@@ -507,7 +555,7 @@
                 });
                 responseOk = response.ok;
                 if (!response.ok || !response.body) throw new Error(`API Error: ${response.status} ${response.statusText}`);
-                showLoading(true, "Receiving response...");
+                showLoading(true, "Получение ответа…");
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 const parser = createSSEParser();
@@ -528,14 +576,16 @@
                         if (data.content) modelMessage.content += data.content;
                     }
                 }
-                showStatus("Response complete.", "success");
+                showStatus("Ответ получен.", "success");
+                persistCurrentSession();
             } catch (error) {
                 if (error.name === 'AbortError') {
-                    showStatus("Request cancelled by user.", "info");
+                    showStatus("Запрос остановлен.", "info");
+                    persistCurrentSession();
                     if (chatHistory[chatHistory.length - 1].content.length < 15) chatHistory.pop();
                 } else {
-                    const errorMsg = !responseOk ? `Connection Error: Could not connect to server.` : error.message;
-                    showStatus(`Error: ${errorMsg}`, "danger");
+                    const errorMsg = !responseOk ? `Не удалось подключиться к серверу.` : error.message;
+                    showStatus(`Ошибка: ${errorMsg}`, "danger");
                     chatHistory.pop();
                     chatHistory.pop();
                     elements.chatInput.value = promptText;
@@ -578,7 +628,7 @@
             if (currentAbortController) currentAbortController.abort();
         }
         function resetButtonToSendState() {
-            elements.sendButton.innerHTML = 'Send';
+            elements.sendButton.innerHTML = 'Отправить';
             elements.sendButton.classList.replace('btn-danger', 'btn-primary');
         }
         function formatChatHistoryForLlama(history) {
@@ -614,7 +664,7 @@
             const messageWrapper = document.createElement('div');
             messageWrapper.className = `chat-message ${message.role}-message d-flex gap-3 mb-3`;
             messageWrapper.dataset.messageId = message.id;
-            const avatar = `<div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">${message.role === 'user' ? 'U' : 'L'}</div>`;
+            const avatar = `<div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">${message.role === 'user' ? 'Вы' : '1С'}</div>`;
             const bodyDiv = `<div class="message-body p-3 border rounded-3 w-100">${message.content || ''}</div>`;
             messageWrapper.innerHTML = avatar + bodyDiv;
             const bodyElement = messageWrapper.querySelector('.message-body');
@@ -628,18 +678,17 @@
         }
         function renderChatHistory() {
             if (chatHistory.length === 0) {
-                elements.chatContainer.innerHTML = `<div class="empty-state text-center h-100 d-flex flex-column justify-content-center align-items-center"><div><h2>LlamaHTML</h2><p class="lead text-body-secondary">Start a conversation with your local Llama model</p></div></div>`;
+                elements.chatContainer.innerHTML = `<div class="empty-state text-center h-100 d-flex flex-column justify-content-center align-items-center px-3"><div style="max-width:32rem"><h2 class="mb-2">1СХарнесс</h2><p class="lead mb-2">ИИ-агент на платформе 1С:Предприятие</p><p class="text-body-secondary mb-0">Запросы, отчёты и инструменты выполняются через 1С. Напишите сообщение или нажмите «Новый чат».</p></div></div>`;
             } else {
                 elements.chatContainer.innerHTML = '';
                 chatHistory.forEach(message => elements.chatContainer.appendChild(createMessageElement(message)));
                 scrollToBottom();
             }
-            updateSaveButtonState();
         }
         function updateModelBubbleContent(messageId, newContent, isStreamingUpdate = false) {
             const messageDiv = document.querySelector(`.model-message[data-message-id="${messageId}"] .message-body`);
             if (!messageDiv) return;
-            messageDiv.innerHTML = marked.parse(newContent || (isStreamingUpdate ? "" : "[Empty Response]"));
+            messageDiv.innerHTML = marked.parse(newContent || (isStreamingUpdate ? "" : "_(пустой ответ)_"));
             addCodeActionsToBubble(messageDiv);
             if(isStreamingUpdate) scrollToBottom();
         }
@@ -652,8 +701,8 @@
                 const actionsContainer = document.createElement('div');
                 actionsContainer.className = 'code-actions';
                 actionsContainer.innerHTML = `
-                    <button class="code-action-button copy-code-button" title="Copy code">Copy</button>
-                    <button class="code-action-button download-code-button" title="Download code">Download</button>
+                    <button class="code-action-button copy-code-button" title="Копировать код">Копировать</button>
+                    <button class="code-action-button download-code-button" title="Скачать код">Скачать</button>
                 `;
                 pre.prepend(actionsContainer);
             });
@@ -664,7 +713,7 @@
                 button.textContent = 'Copied!';
                 button.classList.add('copied');
                 setTimeout(() => {
-                    button.textContent = 'Copy';
+                    button.textContent = 'Копировать';
                     button.classList.remove('copied');
                 }, 2000);
             });
@@ -762,14 +811,14 @@
         function scheduleModelsPoll() {
             clearTimeout(modelsPollTimer);
             const anyLoading = serverModels?.some(m => m.status === 'loading');
-            if (anyLoading || elements.modelsModal.classList.contains('show')) {
+            if (anyLoading || elements.settingsModal.classList.contains('show')) {
                 modelsPollTimer = setTimeout(refreshModels, 2000);
             }
         }
         function renderModelsList() {
             elements.modelsList.innerHTML = '';
             if (!serverModels || serverModels.length === 0) {
-                elements.modelsList.innerHTML = '<p class="text-body-secondary mb-0">No models reported by the server.</p>';
+                elements.modelsList.innerHTML = '<p class="text-body-secondary mb-0">Сервер не вернул список моделей.</p>';
                 elements.modelsNote.textContent = '';
                 return;
             }
@@ -783,7 +832,9 @@
                 name.textContent = model.id;
                 const badge = document.createElement('span');
                 badge.className = `badge ${model.status === 'loaded' ? 'text-bg-success' : model.status === 'loading' ? 'text-bg-warning' : 'text-bg-secondary'}`;
-                badge.textContent = model.status + (model.id === activeModelId && model.status === 'loaded' ? ' · active' : '');
+                const statusRu = { loaded: 'загружена', loading: 'загрузка', unloaded: 'не загружена', error: 'ошибка' };
+                const statusLabel = statusRu[model.status] || model.status;
+                badge.textContent = statusLabel + (model.id === activeModelId && model.status === 'loaded' ? ' · активна' : '');
                 left.append(name, badge);
                 const actions = document.createElement('div');
                 actions.className = 'd-flex gap-1 flex-shrink-0';
@@ -796,21 +847,21 @@
                     actions.appendChild(b);
                 };
                 if (model.status === 'loaded') {
-                    if (model.id !== activeModelId) addBtn('Use', 'use');
-                    addBtn('Reload', 'reload', 'btn-outline-secondary');
-                    addBtn('Unload', 'unload', 'btn-outline-danger');
+                    if (model.id !== activeModelId) addBtn('Выбрать', 'use');
+                    addBtn('Перезагрузить', 'reload', 'btn-outline-secondary');
+                    addBtn('Выгрузить', 'unload', 'btn-outline-danger');
                 } else if (model.status === 'loading') {
                     const s = document.createElement('span');
                     s.className = 'text-body-secondary small';
-                    s.textContent = 'Loading…';
+                    s.textContent = 'Загрузка…';
                     actions.appendChild(s);
                 } else {
-                    addBtn('Load', 'load');
+                    addBtn('Загрузить', 'load');
                 }
                 row.append(left, actions);
                 elements.modelsList.appendChild(row);
             });
-            elements.modelsNote.textContent = 'Loading a model can take a while for large files. Unloading frees its memory and stops any generation using it.';
+            elements.modelsNote.textContent = 'Загрузка больших моделей может занять время. Выгрузка освобождает память на сервере.';
         }
         async function renderClassicModelInfo() {
             elements.modelsList.innerHTML = '';
@@ -824,9 +875,9 @@
             } catch (e) { /* server unreachable or no /props */ }
             const p = document.createElement('p');
             p.className = 'mb-0';
-            p.textContent = current ? `Current model: ${current}` : 'Could not read model information from the server.';
+            p.textContent = current ? `Текущая модель: ${current}` : 'Не удалось получить информацию о модели с сервера.';
             elements.modelsList.appendChild(p);
-            elements.modelsNote.textContent = 'This server is running in single-model mode, so models cannot be loaded, unloaded, or restarted from the browser. To switch models here, start llama-server in router mode instead, for example: llama-server --models-dir /path/to/models';
+            elements.modelsNote.textContent = 'Сервер в режиме одной модели: загрузка и выгрузка из браузера недоступны. Для переключения моделей запустите llama-server в router mode.';
             elements.activeModelLabel.textContent = current || '—';
             elements.activeModelLabel.title = current || '';
         }
@@ -850,36 +901,36 @@
             if (action === 'use') {
                 setActiveModel(modelId);
                 renderModelsList();
-                showStatus(`Active model: ${modelId}`, 'success');
+                showStatus(`Активная модель: ${modelId}`, 'success');
                 return;
             }
             btn.disabled = true;
             try {
                 if (action === 'load') {
-                    showStatus(`Loading ${modelId}…`, 'info');
+                    showStatus(`Загрузка ${modelId}…`, 'info');
                     const res = await modelAdminFetch('/models/load', { model: modelId });
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     await pollModelStatus(modelId, 'loaded');
                     if (!activeModelId) setActiveModel(modelId);
-                    showStatus(`Model loaded: ${modelId}`, 'success');
+                    showStatus(`Модель загружена: ${modelId}`, 'success');
                 } else if (action === 'unload') {
-                    if (!confirm(`Unload ${modelId}? This frees its memory and stops any generation using it.`)) return;
+                    if (!confirm(`Выгрузить ${modelId}? Память на сервере будет освобождена.`)) return;
                     const res = await modelAdminFetch('/models/unload', { model: modelId });
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     if (activeModelId === modelId) setActiveModel(null);
-                    showStatus(`Model unloaded: ${modelId}`, 'info');
+                    showStatus(`Модель выгружена: ${modelId}`, 'info');
                 } else if (action === 'reload') {
-                    showStatus(`Reloading ${modelId}…`, 'info');
+                    showStatus(`Перезагрузка ${modelId}…`, 'info');
                     const un = await modelAdminFetch('/models/unload', { model: modelId });
                     if (!un.ok) throw new Error(`HTTP ${un.status}`);
                     await pollModelStatus(modelId, 'unloaded');
                     const lo = await modelAdminFetch('/models/load', { model: modelId });
                     if (!lo.ok) throw new Error(`HTTP ${lo.status}`);
                     await pollModelStatus(modelId, 'loaded');
-                    showStatus(`Model reloaded: ${modelId}`, 'success');
+                    showStatus(`Модель перезагружена: ${modelId}`, 'success');
                 }
             } catch (e) {
-                showStatus(`Model action failed: ${e.message}`, 'danger');
+                showStatus(`Ошибка модели: ${e.message}`, 'danger');
             } finally {
                 refreshModels();
             }
@@ -890,19 +941,71 @@
                 return Array.isArray(index) ? index : [];
             } catch { return []; }
         }
+        function getArchiveIndex() {
+            try {
+                const index = JSON.parse(localStorage.getItem(SESSION_ARCHIVE_KEY));
+                return Array.isArray(index) ? index : [];
+            } catch { return []; }
+        }
         function saveSessionIndex(index) {
             localStorage.setItem(SESSION_INDEX_KEY, JSON.stringify(index));
         }
+        function saveArchiveIndex(index) {
+            localStorage.setItem(SESSION_ARCHIVE_KEY, JSON.stringify(index));
+        }
+        function deriveSessionTitle() {
+            const userMsg = chatHistory.find(m => m.role === 'user');
+            if (!userMsg) return `${DEFAULT_SESSION_NAME} ${new Date().toLocaleString('ru-RU')}`;
+            let text = String(userMsg.content || '');
+            text = text.replace(/^Attached Files:[\s\S]*?User Message:\n/m, '').trim();
+            text = text.split('\n')[0].trim();
+            if (text.length > 42) text = `${text.slice(0, 41)}…`;
+            return text || `${DEFAULT_SESSION_NAME} ${new Date().toLocaleString('ru-RU')}`;
+        }
+        function persistCurrentSession() {
+            if (!chatHistory.length) return;
+            let sessions = getSessionIndex();
+            if (!currentSessionId) {
+                currentSessionId = `${Date.now()}`;
+                sessions.unshift({ id: currentSessionId, name: deriveSessionTitle(), updatedAt: Date.now() });
+            } else {
+                const session = sessions.find(s => s.id === currentSessionId);
+                if (session) {
+                    session.updatedAt = Date.now();
+                    if (session.name === DEFAULT_SESSION_NAME || session.name.startsWith(`${DEFAULT_SESSION_NAME} `)) {
+                        session.name = deriveSessionTitle();
+                    }
+                }
+            }
+            localStorage.setItem(`${SESSION_DATA_PREFIX}${currentSessionId}`, JSON.stringify(chatHistory));
+            sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            saveSessionIndex(sessions);
+            populateSessions();
+        }
         function populateSessions() {
-            const sessions = getSessionIndex();
+            const sessions = getSessionIndex().slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
             elements.sessionsList.innerHTML = '';
+            if (!sessions.length) {
+                elements.sessionsList.innerHTML = '<div class="small text-body-secondary px-2 py-1">Пока нет сохранённых чатов</div>';
+                return;
+            }
             sessions.forEach(session => {
-                const item = document.createElement('a');
-                item.href = '#';
-                item.className = `list-group-item list-group-item-action d-flex justify-content-between align-items-center ${session.id === currentSessionId ? 'active' : ''}`;
+                const item = document.createElement('div');
+                item.className = `list-group-item list-group-item-action p-0 ${session.id === currentSessionId ? 'active' : ''}`;
                 item.dataset.sessionId = session.id;
-                item.textContent = session.name;
-                item.innerHTML += `<button class="btn-close delete-btn" title="Delete session"></button>`;
+                item.innerHTML = `
+                    <div class="d-flex align-items-stretch w-100 session-row">
+                        <button type="button" class="btn session-open flex-grow-1 text-start text-truncate px-3 py-2">${escapeHtml(session.name)}</button>
+                        <div class="dropdown">
+                            <button type="button" class="btn session-menu px-2 py-2" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" aria-label="Действия с чатом">⋯</button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li><button type="button" class="dropdown-item" data-session-action="rename">Переименовать</button></li>
+                                <li><button type="button" class="dropdown-item" data-session-action="archive">Архивировать</button></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><button type="button" class="dropdown-item text-danger" data-session-action="delete">Удалить</button></li>
+                            </ul>
+                        </div>
+                    </div>`;
                 elements.sessionsList.appendChild(item);
             });
         }
@@ -915,38 +1018,13 @@
             renderChatHistory();
             showStatus("");
             updateSendButtonState();
-            populateSessions(); 
+            populateSessions();
             elements.chatInput.focus();
         }
-        function handleSaveSession() {
-            let sessions = getSessionIndex();
-            let existingSession = currentSessionId ? sessions.find(s => s.id === currentSessionId) : null;
-            let defaultName = existingSession ? existingSession.name : `Chat ${new Date().toLocaleString()}`;
-            const sessionName = prompt("Enter a name for this session:", defaultName);
-            if (!sessionName?.trim()) return;
-            const trimmedName = sessionName.trim();
-            if (!currentSessionId && sessions.some(s => s.name === trimmedName)) {
-                if (!confirm(`A session named "${trimmedName}" already exists. Overwrite?`)) return;
-                const conflictId = sessions.find(s => s.name === trimmedName).id;
-                localStorage.removeItem(`${SESSION_DATA_PREFIX}${conflictId}`);
-                sessions = sessions.filter(s => s.id !== conflictId);
-                saveSessionIndex(sessions);
-            }
-            const sessionIdToSave = currentSessionId || `${Date.now()}`;
-            if (!existingSession) {
-                sessions.push({ id: sessionIdToSave, name: trimmedName });
-                currentSessionId = sessionIdToSave;
-            } else {
-                existingSession.name = trimmedName;
-            }
-            localStorage.setItem(`${SESSION_DATA_PREFIX}${sessionIdToSave}`, JSON.stringify(chatHistory));
-            saveSessionIndex(sessions);
-            populateSessions();
-            showStatus(`Session "${trimmedName}" saved.`, "success");
-        }
         function handleLoadSession(sessionId) {
-            const hasUnsavedChanges = chatHistory.length > 0 && !currentSessionId;
-            if (hasUnsavedChanges && !confirm("Loading a session will discard the current unsaved chat. Continue?")) return;
+            if (sessionId === currentSessionId) return;
+            const hasDraft = chatHistory.length > 0 && !currentSessionId;
+            if (hasDraft && !confirm('Текущий черновик не сохранён. Открыть другой чат?')) return;
             try {
                 const historyJson = localStorage.getItem(`${SESSION_DATA_PREFIX}${sessionId}`);
                 chatHistory = JSON.parse(historyJson) || [];
@@ -954,24 +1032,44 @@
                 currentSessionId = sessionId;
                 renderChatHistory();
                 populateSessions();
-                showStatus("Session loaded.", "info");
-            } catch(e) {
-                showStatus("Failed to load session.", "danger");
+                showStatus("Чат открыт.", "info");
+            } catch (e) {
+                showStatus("Не удалось открыть чат.", "danger");
             }
+        }
+        function handleRenameSession(sessionId) {
+            const sessions = getSessionIndex();
+            const session = sessions.find(s => s.id === sessionId);
+            if (!session) return;
+            const newName = prompt('Название чата:', session.name);
+            if (!newName?.trim()) return;
+            session.name = newName.trim();
+            session.updatedAt = Date.now();
+            saveSessionIndex(sessions);
+            populateSessions();
+            showStatus('Чат переименован.', 'success');
+        }
+        function handleArchiveSession(sessionId) {
+            const sessions = getSessionIndex();
+            const session = sessions.find(s => s.id === sessionId);
+            if (!session) return;
+            const archive = getArchiveIndex();
+            archive.unshift({ ...session, archivedAt: Date.now() });
+            saveArchiveIndex(archive.slice(0, 200));
+            saveSessionIndex(sessions.filter(s => s.id !== sessionId));
+            if (currentSessionId === sessionId) startNewSession();
+            else populateSessions();
+            showStatus(`«${session.name}» перенесён в архив.`, 'info');
         }
         function handleDeleteSession(sessionId) {
             const sessions = getSessionIndex();
             const session = sessions.find(s => s.id === sessionId);
-            if (!session || !confirm(`Delete session "${session.name}"? This cannot be undone.`)) return;
+            if (!session || !confirm(`Удалить «${session.name}»? Это нельзя отменить.`)) return;
             localStorage.removeItem(`${SESSION_DATA_PREFIX}${sessionId}`);
             saveSessionIndex(sessions.filter(s => s.id !== sessionId));
             if (currentSessionId === sessionId) startNewSession();
-            populateSessions();
-            showStatus(`Session "${session.name}" deleted.`, "info");
-        }
-        function updateSaveButtonState() {
-            const canSave = chatHistory.length > 0 && !currentAbortController;
-            elements.saveSessionButton.disabled = !canSave;
+            else populateSessions();
+            showStatus(`«${session.name}» удалён.`, 'info');
         }
         initialize();
     </script>
