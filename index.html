@@ -62,8 +62,157 @@
             background-color: var(--bs-success);
             color: white;
         }
-        #chatInput {
+        .compose-wrap {
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+        .compose-shell {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            padding: 10px 12px;
+            border: 1px solid var(--1c-border, #a0a0a0);
+            border-radius: 22px;
+            background: var(--1c-surface, #fff);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+        .compose-icon-btn {
+            width: 32px;
+            height: 32px;
+            flex: 0 0 32px;
+            border: 0;
+            border-radius: 999px;
+            background: transparent;
+            color: var(--bs-body-color);
+            font-size: 1.35rem;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-bottom: 2px;
+        }
+        .compose-icon-btn:hover {
+            background: rgba(0, 0, 0, 0.06);
+        }
+        .compose-input {
+            flex: 1;
             resize: none;
+            border: 0;
+            background: transparent;
+            box-shadow: none;
+            outline: none;
+            min-height: 28px;
+            max-height: 160px;
+            padding: 4px 0 6px;
+            font-size: 15px;
+            line-height: 1.45;
+        }
+        .compose-input:focus {
+            box-shadow: none;
+        }
+        .compose-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+            margin-bottom: 2px;
+        }
+        .compose-model {
+            border: 0;
+            background: transparent;
+            color: var(--bs-secondary-color);
+            font-size: 12px;
+            max-width: 150px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 6px 4px;
+            border-radius: 8px;
+        }
+        .compose-model:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--bs-body-color);
+        }
+        .compose-send {
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #2f2f2f;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .compose-send:hover:not(:disabled) {
+            background: #111;
+        }
+        .compose-send:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+        .compose-send.is-stop {
+            background: var(--bs-danger);
+        }
+        .compose-stop {
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 2px;
+            display: block;
+        }
+        .compose-files {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .compose-files:empty {
+            display: none;
+        }
+        .compose-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 12px 0;
+            min-height: 20px;
+            font-size: 12px;
+            color: var(--bs-secondary-color);
+        }
+        .compose-context {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .compose-status {
+            text-align: right;
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .compose-status.is-info,
+        .compose-status.is-success,
+        .compose-status.is-warning,
+        .compose-status.is-danger {
+            font-weight: 500;
+        }
+        [data-bs-theme="dark"] .compose-shell {
+            background: #353535;
+            border-color: #666;
+        }
+        [data-bs-theme="dark"] .compose-send {
+            background: #f0f0f0;
+            color: #111;
+        }
+        [data-bs-theme="dark"] .compose-icon-btn:hover,
+        [data-bs-theme="dark"] .compose-model:hover {
+            background: rgba(255, 255, 255, 0.08);
         }
         #sidebar {
             transition: transform .3s ease-in-out, width .3s ease-in-out;
@@ -133,17 +282,26 @@
                     </div>
                 </div>
             </div>
-            <div class="chat-input-container p-3 bg-body-tertiary border-top">
-                <div class="input-area">
-                    <div id="stagedFilesArea" class="d-flex flex-wrap gap-2 mb-2" style="display: none;">
-                    </div>
-                    <div class="input-group">
-                        <textarea class="form-control" id="chatInput" placeholder="Сообщение… Ctrl+Enter — отправить" rows="1"></textarea>
-                        <label for="fileInput" class="btn btn-outline-secondary" title="Прикрепить файлы">📎</label>
+            <div class="chat-input-container px-3 pb-3 pt-2">
+                <div class="compose-wrap">
+                    <div id="stagedFilesArea" class="compose-files"></div>
+                    <div class="compose-shell">
+                        <label for="fileInput" class="compose-icon-btn mb-0" title="Прикрепить файлы" aria-label="Прикрепить файлы">+</label>
                         <input type="file" id="fileInput" multiple class="d-none">
-                        <button class="btn btn-primary" type="button" id="sendButton">Отправить</button>
+                        <textarea class="compose-input" id="chatInput" placeholder="Добавьте сообщение…" rows="1"></textarea>
+                        <div class="compose-actions">
+                            <button type="button" class="compose-model" id="composeModelBtn" title="Выбрать модель">
+                                <span id="composeModelLabel">Модель</span> ▾
+                            </button>
+                            <button type="button" class="compose-send" id="sendButton" title="Отправить" aria-label="Отправить">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+                            </button>
+                        </div>
                     </div>
-                    <div class="status-bar text-center text-body-secondary small mt-2" id="statusBar"></div>
+                    <div class="compose-footer">
+                        <span class="compose-context" id="composeContext">1СХарнесс</span>
+                        <span class="compose-status" id="statusBar"></span>
+                    </div>
                 </div>
             </div>
         </main>
@@ -232,8 +390,12 @@
             modelsNote: document.getElementById('modelsNote'),
             refreshModelsBtn: document.getElementById('refreshModelsBtn'),
             sidebar: document.getElementById('sidebar'),
-            highlightTheme: document.getElementById('highlight-theme')
+            highlightTheme: document.getElementById('highlight-theme'),
+            composeModelBtn: document.getElementById('composeModelBtn'),
+            composeModelLabel: document.getElementById('composeModelLabel'),
+            composeContext: document.getElementById('composeContext')
         };
+        const SEND_BUTTON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>';
         let chatHistory = [];
         let messageCounter = 0;
         let currentSessionId = null;
@@ -268,6 +430,7 @@
             populateSessions();
             startNewSession();
             updateSendButtonState();
+            updateComposeContext();
         }
         function configureMarked() {
             marked.setOptions({
@@ -290,6 +453,10 @@
                 closeMobileSidebar();
             });
             elements.themeSwitcher.addEventListener('click', toggleTheme);
+            elements.composeModelBtn.addEventListener('click', () => {
+                bootstrap.Modal.getOrCreateInstance(elements.settingsModal).show();
+                bootstrap.Tab.getOrCreateInstance(document.getElementById('tab-models-btn')).show();
+            });
             elements.rememberServerUrl.addEventListener('change', handleRememberUrlChange);
             elements.serverUrl.addEventListener('input', handleServerUrlInput);
             elements.chatInput.addEventListener('input', () => {
@@ -402,7 +569,7 @@
         function handleFileSelection(event) {
             const files = event.target.files;
             if (!files) return;
-            showLoading(true, "Processing files...");
+            showLoading(true, "Обработка файлов…");
             const newFiles = Array.from(files).filter(f => !stagedFiles.some(sf => sf.name === f.name));
             if (newFiles.length !== files.length) showStatus("Файлы с одинаковыми именами пропущены.", "warning");
             if (newFiles.length === 0) {
@@ -441,23 +608,39 @@
         }
         function renderStagedFiles() {
             elements.stagedFilesArea.innerHTML = '';
-            if (stagedFiles.length === 0) {
-                elements.stagedFilesArea.style.display = 'none';
-                updateSendButtonState();
-                return;
-            }
-            elements.stagedFilesArea.style.display = 'flex';
             stagedFiles.forEach((fileData, index) => {
                 const item = document.createElement('div');
                 item.className = `badge d-flex align-items-center ${fileData.error ? 'text-bg-danger' : 'text-bg-secondary'}`;
-                item.title = fileData.name + (fileData.error ? ` (Error: ${fileData.error})` : '');
+                item.title = fileData.name + (fileData.error ? ` (ошибка: ${fileData.error})` : '');
                 item.innerHTML = `
                     <span class="me-2">${escapeHtml(fileData.name)}</span>
-                    <button type="button" class="btn-close btn-close-white" aria-label="Remove file" data-index="${index}"></button>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Убрать файл" data-index="${index}"></button>
                 `;
                 elements.stagedFilesArea.appendChild(item);
             });
             updateSendButtonState();
+        }
+        function setSendButtonMode(mode) {
+            if (mode === 'stop') {
+                elements.sendButton.classList.add('is-stop');
+                elements.sendButton.innerHTML = '<span class="compose-stop" aria-hidden="true"></span>';
+                elements.sendButton.title = 'Остановить';
+                elements.sendButton.setAttribute('aria-label', 'Остановить');
+            } else {
+                elements.sendButton.classList.remove('is-stop');
+                elements.sendButton.innerHTML = SEND_BUTTON_SVG;
+                elements.sendButton.title = 'Отправить';
+                elements.sendButton.setAttribute('aria-label', 'Отправить');
+            }
+        }
+        function updateComposeContext() {
+            if (!elements.composeContext) return;
+            if (!currentSessionId) {
+                elements.composeContext.textContent = chatHistory.length ? 'Черновик' : '1СХарнесс';
+                return;
+            }
+            const session = getSessionIndex().find(s => s.id === currentSessionId);
+            elements.composeContext.textContent = session ? session.name : '1СХарнесс';
         }
         function handleRemoveStagedFile(event) {
             if (event.target.matches('[data-index]')) {
@@ -472,8 +655,7 @@
             elements.fileInput.value = null;
         }
         async function handleSendPrompt() {
-            elements.sendButton.innerHTML = `<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span> Стоп`;
-            elements.sendButton.classList.replace('btn-primary', 'btn-danger');
+            setSendButtonMode('stop');
             elements.chatInput.disabled = true;
             const serverUrl = elements.serverUrl.value.trim();
             let promptText = elements.chatInput.value.trim();
@@ -628,8 +810,7 @@
             if (currentAbortController) currentAbortController.abort();
         }
         function resetButtonToSendState() {
-            elements.sendButton.innerHTML = 'Отправить';
-            elements.sendButton.classList.replace('btn-danger', 'btn-primary');
+            setSendButtonMode('send');
         }
         function formatChatHistoryForLlama(history) {
             return history.map(msg => {
@@ -640,22 +821,22 @@
         }
         function showLoading(isLoading, message = "") {
             if (isLoading) {
-                elements.statusBar.innerHTML = `<div class="spinner-border spinner-border-sm me-2" role="status"></div><span>${escapeHtml(message)}</span>`;
-            } else {
-                if (!elements.statusBar.classList.contains('text-bg-danger')) {
-                     elements.statusBar.innerHTML = '';
-                }
+                elements.statusBar.className = 'compose-status is-info';
+                elements.statusBar.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span>${escapeHtml(message)}`;
+            } else if (!elements.statusBar.classList.contains('is-danger') && !elements.statusBar.classList.contains('is-warning')) {
+                elements.statusBar.className = 'compose-status';
+                elements.statusBar.textContent = '';
             }
         }
         function showStatus(message, type = "info") { 
             showLoading(false);
-            elements.statusBar.className = `status-bar text-center small mt-2 p-1 rounded-pill text-bg-${type}`;
+            elements.statusBar.className = `compose-status is-${type}`;
             elements.statusBar.textContent = message;
             if (type !== 'danger' && type !== 'warning') {
                 setTimeout(() => {
                     if (elements.statusBar.textContent === message) {
                        elements.statusBar.textContent = '';
-                       elements.statusBar.className = 'status-bar text-center text-body-secondary small mt-2';
+                       elements.statusBar.className = 'compose-status';
                     }
                 }, 4000);
             }
@@ -684,6 +865,7 @@
                 chatHistory.forEach(message => elements.chatContainer.appendChild(createMessageElement(message)));
                 scrollToBottom();
             }
+            updateComposeContext();
         }
         function updateModelBubbleContent(messageId, newContent, isStreamingUpdate = false) {
             const messageDiv = document.querySelector(`.model-message[data-message-id="${messageId}"] .message-body`);
@@ -781,16 +963,21 @@
             updateActiveModelLabel();
         }
         function updateActiveModelLabel() {
-            let text = '—';
+            let text = 'Модель не выбрана';
             if (serverModels) {
                 if (activeModelId) text = activeModelId;
                 else {
                     const loaded = serverModels.find(m => m.status === 'loaded');
-                    text = loaded ? loaded.id : 'No model loaded';
+                    text = loaded ? loaded.id : 'Модель не загружена';
                 }
             }
             elements.activeModelLabel.textContent = text;
             elements.activeModelLabel.title = text;
+            if (elements.composeModelLabel) {
+                const short = text.length > 22 ? `${text.slice(0, 21)}…` : text;
+                elements.composeModelLabel.textContent = short;
+                elements.composeModelBtn.title = text;
+            }
         }
         async function refreshModels() {
             try {
@@ -880,6 +1067,11 @@
             elements.modelsNote.textContent = 'Сервер в режиме одной модели: загрузка и выгрузка из браузера недоступны. Для переключения моделей запустите llama-server в router mode.';
             elements.activeModelLabel.textContent = current || '—';
             elements.activeModelLabel.title = current || '';
+            if (elements.composeModelLabel) {
+                const label = current || 'Модель';
+                elements.composeModelLabel.textContent = label.length > 22 ? `${label.slice(0, 21)}…` : label;
+                elements.composeModelBtn.title = label;
+            }
         }
         async function pollModelStatus(id, want, timeoutMs = 180000) {
             const start = Date.now();
@@ -981,6 +1173,7 @@
             sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
             saveSessionIndex(sessions);
             populateSessions();
+            updateComposeContext();
         }
         function populateSessions() {
             const sessions = getSessionIndex().slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
@@ -1019,6 +1212,7 @@
             showStatus("");
             updateSendButtonState();
             populateSessions();
+            updateComposeContext();
             elements.chatInput.focus();
         }
         function handleLoadSession(sessionId) {

@@ -103,9 +103,9 @@ body {
   border-right: 1px solid var(--1c-border);
 }
 
-.chat-input-container.bg-body-tertiary {
-  background-color: var(--1c-bar) !important;
-  border-top-color: var(--1c-border) !important;
+.chat-input-container {
+  background: transparent !important;
+  border-top: 0 !important;
 }
 
 .chat-container {
