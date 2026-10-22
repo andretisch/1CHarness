@@ -10,6 +10,18 @@
 
 Сейчас UI рассчитан на **llama-server** (`/completion`, стриминг). Подключение к OpenAI/Ollama и бэкенду 1С — следующий шаг.
 
+## Внешняя обработка (v0.1)
+
+Файл [`epf/1CHarness.epf`](epf/1CHarness.epf) — первая версия обработки с управляемой формой. При открытии показывает UI чата (`index.html?demo=1` рядом с каталогом репозитория / `vendor/`).
+
+Запуск (учебная платформа, один сеанс ИБ):
+
+```bash
+DISPLAY=:1 /opt/1cv8t/x86_64/8.3.27.2342/1cv8t /Execute"/path/to/1CHarness/epf/1CHarness.epf"
+```
+
+Тестовая файловая ИБ для разработки: `/workspace/bases/harness-empty` (не в git).
+
 ### Просмотр в браузере (демо без LLM)
 
 ```bash
