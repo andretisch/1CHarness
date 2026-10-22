@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LlamaHTML </title>
     <link href="vendor/bootstrap/5.3.3/bootstrap.min.css" rel="stylesheet">
+    <link href="vendor/theme/1c-taxi.css" rel="stylesheet">
     <script src="vendor/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="vendor/highlight.js/11.9.0/styles/github.min.css" id="highlight-theme">
+    <link rel="stylesheet" href="vendor/highlight.js/11.9.0/styles/1c-taxi-light.css" id="highlight-theme">
     <script src="vendor/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
         html, body {
@@ -210,8 +211,8 @@
         function setTheme(theme) {
             document.documentElement.setAttribute('data-bs-theme', theme);
             elements.themeSwitcher.textContent = theme === 'dark' ? '☀️' : '🌙';
-            const lightThemeUrl = 'vendor/highlight.js/11.9.0/styles/github.min.css';
-            const darkThemeUrl = 'vendor/highlight.js/11.9.0/styles/github-dark.min.css';
+            const lightThemeUrl = 'vendor/highlight.js/11.9.0/styles/1c-taxi-light.css';
+            const darkThemeUrl = 'vendor/highlight.js/11.9.0/styles/1c-taxi-dark.css';
             elements.highlightTheme.href = theme === 'dark' ? darkThemeUrl : lightThemeUrl;
             localStorage.setItem('theme', theme);
         }

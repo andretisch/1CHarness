@@ -1,0 +1,211 @@
+/*
+  Палитра интерфейса 1С:Предприятие 8 (Такси), только цвета.
+  Форма Bootstrap / LlamaHTML не меняется.
+*/
+
+:root,
+[data-bs-theme="light"] {
+  color-scheme: light;
+
+  --1c-header: #fff5af;
+  --1c-active: #ffe289;
+  --1c-panel: #ebf2f6;
+  --1c-bar: #bebebe;
+  --1c-border: #a0a0a0;
+  --1c-surface: #ffffff;
+  --1c-canvas: #f2f2f2;
+  --1c-ink: #000000;
+  --1c-muted: #404040;
+
+  --bs-body-font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+  --bs-font-sans-serif: Tahoma, "Segoe UI", Arial, sans-serif;
+
+  --bs-body-bg: var(--1c-surface);
+  --bs-body-color: var(--1c-ink);
+  --bs-emphasis-color: var(--1c-ink);
+  --bs-secondary-color: var(--1c-muted);
+  --bs-tertiary-color: var(--1c-muted);
+  --bs-border-color: var(--1c-border);
+  --bs-border-color-translucent: rgba(160, 160, 160, 0.55);
+
+  --bs-secondary-bg: var(--1c-canvas);
+  --bs-tertiary-bg: var(--1c-panel);
+
+  --bs-primary: #ffe289;
+  --bs-primary-rgb: 255, 226, 137;
+  --bs-primary-text-emphasis: #000000;
+  --bs-primary-bg-subtle: #fff5c0;
+  --bs-primary-border-subtle: #e6c85a;
+
+  --bs-secondary: #bebebe;
+  --bs-secondary-rgb: 190, 190, 190;
+  --bs-secondary-text-emphasis: #000000;
+  --bs-secondary-bg-subtle: #e8e8e8;
+  --bs-secondary-border-subtle: #a0a0a0;
+
+  --bs-success: #2e7d32;
+  --bs-danger: #c62828;
+  --bs-warning: #fff5af;
+  --bs-info: #5c7a8a;
+  --bs-light: #f2f2f2;
+  --bs-dark: #333333;
+
+  --bs-link-color: #0b5394;
+  --bs-link-hover-color: #083d6b;
+
+  --bs-focus-ring-color: rgba(255, 226, 137, 0.65);
+}
+
+[data-bs-theme="dark"] {
+  color-scheme: dark;
+
+  --1c-header: #4a4528;
+  --1c-active: #8a7340;
+  --1c-panel: #3a4550;
+  --1c-bar: #4a4a4a;
+  --1c-border: #6a6a6a;
+  --1c-surface: #2f2f2f;
+  --1c-canvas: #262626;
+  --1c-ink: #f0f0f0;
+  --1c-muted: #c8c8c8;
+
+  --bs-body-bg: var(--1c-surface);
+  --bs-body-color: var(--1c-ink);
+  --bs-emphasis-color: #ffffff;
+  --bs-secondary-color: #c0c0c0;
+  --bs-tertiary-color: #b0b0b0;
+  --bs-border-color: var(--1c-border);
+
+  --bs-secondary-bg: var(--1c-canvas);
+  --bs-tertiary-bg: var(--1c-panel);
+
+  --bs-primary: #8a7340;
+  --bs-primary-rgb: 138, 115, 64;
+  --bs-primary-text-emphasis: #fff8e7;
+  --bs-primary-bg-subtle: #4a4528;
+  --bs-primary-border-subtle: #6a5a30;
+
+  --bs-secondary: #5a5a5a;
+  --bs-secondary-rgb: 90, 90, 90;
+  --bs-link-color: #8ecae6;
+  --bs-link-hover-color: #bde0fe;
+}
+
+html,
+body {
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}
+
+/* Как панели в редакторе: боковая — голубоватая, низ ввода — серая полоса */
+#sidebar.bg-body-tertiary {
+  background-color: var(--1c-panel) !important;
+  border-right: 1px solid var(--1c-border);
+}
+
+.chat-input-container.bg-body-tertiary {
+  background-color: var(--1c-bar) !important;
+  border-top-color: var(--1c-border) !important;
+}
+
+.chat-container {
+  background-color: var(--1c-surface);
+}
+
+/* Кнопки «жёлтые», как в Такси */
+.btn-primary {
+  --bs-btn-color: #000;
+  --bs-btn-bg: var(--1c-active);
+  --bs-btn-border-color: var(--1c-border);
+  --bs-btn-hover-color: #000;
+  --bs-btn-hover-bg: #fff0a5;
+  --bs-btn-hover-border-color: var(--1c-border);
+  --bs-btn-active-color: #000;
+  --bs-btn-active-bg: #ffd96a;
+  --bs-btn-active-border-color: var(--1c-border);
+  --bs-btn-disabled-color: #666;
+  --bs-btn-disabled-bg: #e0e0e0;
+  --bs-btn-disabled-border-color: var(--1c-border);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: #000;
+  --bs-btn-border-color: var(--1c-border);
+  --bs-btn-hover-color: #000;
+  --bs-btn-hover-bg: var(--1c-active);
+  --bs-btn-hover-border-color: var(--1c-border);
+  --bs-btn-active-color: #000;
+  --bs-btn-active-bg: #ffd96a;
+  --bs-btn-active-border-color: var(--1c-border);
+}
+
+.btn-outline-secondary,
+.btn-secondary,
+.btn-light {
+  --bs-btn-color: #000;
+  --bs-btn-border-color: var(--1c-border);
+}
+
+[data-bs-theme="dark"] .btn-primary,
+[data-bs-theme="dark"] .btn-outline-primary {
+  --bs-btn-color: #fff8e7;
+}
+
+.list-group-item.active {
+  background-color: var(--1c-active);
+  border-color: var(--1c-border);
+  color: #000;
+}
+
+[data-bs-theme="dark"] .list-group-item.active {
+  color: #fff8e7;
+}
+
+.user-message .message-body {
+  background-color: var(--bs-primary-bg-subtle);
+  border-color: var(--bs-primary-border-subtle);
+}
+
+.model-message .message-body {
+  background-color: var(--1c-surface);
+  border-color: var(--1c-border);
+}
+
+.model-message .rounded-circle.bg-secondary {
+  background-color: var(--1c-panel) !important;
+  color: #000 !important;
+  border: 1px solid var(--1c-border);
+}
+
+.user-message .rounded-circle.bg-secondary {
+  background-color: var(--1c-bar) !important;
+  color: #000 !important;
+  border: 1px solid var(--1c-border);
+}
+
+.modal-content,
+.offcanvas,
+.dropdown-menu {
+  border-color: var(--1c-border);
+}
+
+.form-control,
+.form-select,
+.input-group-text {
+  border-color: var(--1c-border);
+  background-color: var(--1c-surface);
+  color: var(--bs-body-color);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #e6c85a;
+  box-shadow: 0 0 0 0.2rem var(--bs-focus-ring-color);
+}
+
+.status-bar.text-bg-danger,
+.status-bar.text-bg-warning,
+.status-bar.text-bg-success {
+  border: 1px solid var(--1c-border);
+  color: #000;
+}
