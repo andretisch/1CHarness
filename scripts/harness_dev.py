@@ -11,6 +11,11 @@ WEB_PORT = int(os.environ.get("HARNESS_WEB_PORT", "8765"))
 
 
 def main():
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "write_llm_dev_config.py")],
+        cwd=str(ROOT),
+        check=False,
+    )
     print(f"Harness dev: http://127.0.0.1:{WEB_PORT}/index.html", flush=True)
     subprocess.run(
         [sys.executable, "-m", "http.server", str(WEB_PORT), "--bind", "127.0.0.1"],

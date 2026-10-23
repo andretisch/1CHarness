@@ -14,6 +14,9 @@ workspace/sessions/*.json
 **/__pycache__/
 *.pyc
 
+# Ключ LLM для локального dev (генерируется из OLLAMA_API_KEY)
+/web/js/llm-dev-config.js
+
 # Справочник навыков (локальная копия cc-1c-skills, не коммитить)
 .cursor/cc-1c-skills-reference/
 

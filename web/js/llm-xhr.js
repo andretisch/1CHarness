@@ -14,7 +14,7 @@ export function getLlmSettings() {
     apiBase,
     apiStyle: apiStyle === 'ollama' ? 'ollama' : 'openai',
     model: localStorage.getItem('harnessOpenAiModel') || DEFAULTS.model,
-    apiKey: localStorage.getItem('harnessLlmApiKey') || '',
+    apiKey: localStorage.getItem('harnessLlmApiKey') || (typeof window !== 'undefined' && window.__HARNESS_LLM_API_KEY) || '',
     timeoutMs: DEFAULTS.timeoutMs,
   };
 }
