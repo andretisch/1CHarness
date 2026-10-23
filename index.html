@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1СХарнесс</title>
+    <meta name="theme-color" content="#003366">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="vendor/bootstrap/5.3.3/bootstrap.min.css" rel="stylesheet">
+    <link href="vendor/theme/krabobot-chat.css" rel="stylesheet">
+    <link href="vendor/theme/krabobot.css" rel="stylesheet" id="palette-bootstrap">
+    <link href="vendor/theme/harness-layout.css" rel="stylesheet">
+    <script src="vendor/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="vendor/highlight.js/11.9.0/styles/krabobot-light.css" id="highlight-theme">
+    <script src="vendor/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        html, body { height: 100%; overflow: hidden; margin: 0; }
+        .context-ring {
+            display: block;
+            transform: rotate(-90deg);
+        }
+        .context-ring-bg {
+            fill: none;
+            stroke: var(--bs-border-color);
+            stroke-width: 2.5;
+        }
+        .context-ring-fill {
+            fill: none;
+            stroke: var(--bs-primary);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.2s ease, stroke 0.2s ease;
+        }
+        .context-meter.is-warning .context-ring-fill {
+            stroke: var(--bs-warning);
+        }
+        .context-meter.is-danger .context-ring-fill {
+            stroke: var(--bs-danger);
+        }
+        .compose-status.is-info,
+        .compose-status.is-success,
+        .compose-status.is-warning,
+        .compose-status.is-danger {
+            font-weight: 500;
+        }
+        [data-bs-theme="dark"] .compose-shell {
+            background: #353535;
+            border-color: #666;
+        }
+        [data-bs-theme="dark"] .compose-send {
+            background: #f0f0f0;
+            color: #111;
+        }
+        [data-bs-theme="dark"] .compose-icon-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body>
+    <div id="harness-1c-bridge" hidden aria-hidden="true"></div>
+    <div id="harness-layout" class="kb-layout">
+        <header class="kb-top">
+            <div class="kb-top-inner">
+                <div class="kb-menu-wrap">
+                    <button type="button" id="headerMenuBtn" class="kb-menu-btn" aria-expanded="false" aria-haspopup="true" aria-controls="headerMenuDropdown" aria-label="Меню">
+                        <span class="kb-menu-burger" aria-hidden="true"></span>
+                    </button>
+                    <div id="headerMenuDropdown" class="kb-dropdown" role="menu" aria-label="Разделы" hidden>
+                        <button type="button" class="kb-dropdown-item" role="menuitem" id="headerSettingsBtn">Настройки</button>
+                    </div>
+                </div>
+                <div class="kb-brand">
+                    <h1 class="kb-sr">1СХарнесс</h1>
+                    <span class="kb-brand-word" aria-hidden="true"><span class="kb-brand-cr">1С</span><span class="kb-brand-domain">Харнесс</span></span>
+                </div>
+                <div class="kb-toolbar">
+                    <span id="headerStatus" class="kb-status" aria-live="polite"></span>
+                </div>
+            </div>
+        </header>
+        <div class="kb-body">
+            <div class="kb-sidebar-wrap" id="kbSidebarWrap">
+                <aside class="kb-sidebar" aria-label="Диалоги" id="kbSidebar">
+                    <div class="kb-sidebar-head">
+                        <div class="kb-sidebar-head-row">
+                            <h2 class="kb-sidebar-title">Диалоги</h2>
+                            <button type="button" id="sidebarToggle" class="kb-sidebar-toggle kb-btn kb-btn-secondary kb-btn-icon" aria-expanded="true" aria-controls="kbSidebar" aria-label="Свернуть список диалогов" title="Свернуть список диалогов">
+                                <span class="kb-sidebar-toggle-chevron" aria-hidden="true">‹</span>
+                            </button>
+                        </div>
+                        <button type="button" id="newChatBtn" class="kb-btn kb-btn-secondary kb-btn-block">Новый диалог</button>
+                    </div>
+                    <ul id="sessionsList" class="kb-session-list" role="list"></ul>
+                </aside>
+            </div>
+            <button type="button" id="sidebarExpand" class="kb-sidebar-expand kb-btn kb-btn-secondary" aria-controls="kbSidebar" aria-label="Развернуть список диалогов" title="Развернуть список диалогов" hidden>
+                <span class="kb-sidebar-toggle-chevron" aria-hidden="true">›</span>
+                <span>Диалоги</span>
+            </button>
+            <div class="kb-panel">
+                <div class="kb-panel-stage">
+                    <div class="kb-chat-backdrop" aria-hidden="true"></div>
+                    <div id="kb-view-chat" class="kb-view kb-view-chat" role="region" aria-label="Чат">
+                        <main class="kb-main">
+                            <div class="kb-log-wrap">
+                                <div id="chatContainer" class="kb-log" role="log" aria-label="Переписка"></div>
+                            </div>
+                            <form id="chatForm" class="harness-compose-form" onsubmit="return false;">
+                                <input type="file" id="fileInput" class="kb-file-input" multiple>
+                                <div class="harness-compose-wrap">
+                                    <div id="stagedFilesArea" class="compose-files"></div>
+                                    <div class="compose-shell">
+                                        <label for="fileInput" class="compose-icon-btn mb-0" title="Прикрепить файлы" aria-label="Прикрепить файлы">+</label>
+                                        <textarea class="compose-input" id="chatInput" placeholder="Добавьте сообщение…" rows="1"></textarea>
+                                        <button type="button" class="compose-send" id="sendButton" title="Отправить" aria-label="Отправить">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+                                        </button>
+                                    </div>
+                                    <div class="compose-footer">
+                                        <span class="compose-context" id="composeContext">1СХарнесс</span>
+                                        <div class="compose-footer-end">
+                                            <span class="compose-status" id="statusBar" aria-hidden="true"></span>
+                                            <span class="context-meter" id="contextMeter" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Заполнение контекстного окна">
+                                                <svg class="context-ring" width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+                                                    <circle class="context-ring-bg" cx="11" cy="11" r="9"></circle>
+                                                    <circle class="context-ring-fill" id="contextRingFill" cx="11" cy="11" r="9" stroke-dasharray="56.55" stroke-dashoffset="56.55"></circle>
+                                                </svg>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </main>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="settingsModalLabel">Настройки</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs flex-nowrap overflow-auto" role="tablist" style="scrollbar-width: thin;">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tab-connection-btn" data-bs-toggle="tab" data-bs-target="#tab-connection" type="button" role="tab">Подключение</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-generation-btn" data-bs-toggle="tab" data-bs-target="#tab-generation" type="button" role="tab">Генерация</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-interface-btn" data-bs-toggle="tab" data-bs-target="#tab-interface" type="button" role="tab">Интерфейс</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content pt-3">
+                        <div class="tab-pane fade show active" id="tab-connection" role="tabpanel">
+                            <div class="mb-3">
+                                <label for="openAiBaseUrl" class="form-label">Базовый URL API</label>
+                                <input type="url" class="form-control" id="openAiBaseUrl" placeholder="https://ollama.com/v1" value="https://ollama.com/v1">
+                                <div class="form-text">Прямой XHR, без прокси. Ollama Cloud: <code>https://ollama.com/v1</code> + путь <code>/v1/chat/completions</code> или стиль Ollama <code>/api/chat</code>.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="llmApiStyle" class="form-label">Стиль API</label>
+                                <select class="form-select" id="llmApiStyle">
+                                    <option value="openai" selected>OpenAI-compatible (/v1/chat/completions)</option>
+                                    <option value="ollama">Ollama (/api/chat)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="openAiModel" class="form-label">Модель</label>
+                                <input type="text" class="form-control" id="openAiModel" value="gemma4:31b-cloud">
+                            </div>
+                            <div class="mb-3">
+                                <label for="llmApiKey" class="form-label">API-ключ (Bearer)</label>
+                                <input type="password" class="form-control" id="llmApiKey" autocomplete="off" placeholder="Ollama Cloud — ключ с ollama.com">
+                                <div class="form-text">Файл <code>config.json</code> в рабочей области агента (через мост 1С). В dev ключ может подставиться из <code>OLLAMA_API_KEY</code>.</div>
+                            </div>
+                            <div class="form-text mb-0">Инструменты — только через DOM-мост 1С (<code>#harness-1c-bridge</code>). В браузере платформу имитирует JS (<code>stub-1c-platform.js</code>); в обработке — <code>?backend=1c</code> и <code>harnessDeliverResponse</code>.</div>
+                        </div>
+                        <div class="tab-pane fade" id="tab-generation" role="tabpanel">
+                            <div class="mb-3"><label for="temperature" class="form-label">Температура</label><input type="number" class="form-control" id="temperature" min="0" max="2" step="0.1" value="0.7"><div class="form-text">Чем выше, тем разнообразнее ответ.</div></div>
+                            <div class="mb-0"><label for="contextWindow" class="form-label">Размер контекста</label><input type="number" class="form-control" id="contextWindow" min="1024" step="1024" value="32768"><div class="form-text">Для индикатора заполнения под полем ввода (токены).</div></div>
+                        </div>
+                        <div class="tab-pane fade" id="tab-interface" role="tabpanel">
+                            <div class="mb-3">
+                                <label for="paletteSelect" class="form-label">Цветовая палитра</label>
+                                <select class="form-select" id="paletteSelect">
+                                    <option value="krabobot">Крабобот (синий)</option>
+                                    <option value="taxi">1С Такси (шахматка)</option>
+                                </select>
+                                <div class="form-text">Цвета 1С Такси; подложка чата с логотипом — как у крабобота. Поле ввода — капсула.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="brightnessSelect" class="form-label">Яркость</label>
+                                <select class="form-select" id="brightnessSelect">
+                                    <option value="light">Светлая</option>
+                                    <option value="dark">Тёмная</option>
+                                </select>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="sidebarCollapsedPref">
+                                <label class="form-check-label" for="sidebarCollapsedPref">Сворачивать список диалогов при открытии</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Готово</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="vendor/chart.js/chart.umd.min.js"></script>
+    <script src="vendor/bootstrap/5.3.3/bootstrap.bundle.min.js"></script>
+    <script src="web/js/llm-dev-config.js"></script>
+    <script type="module" src="web/js/harness-agent-boot.js"></script>
+    <script>
+        const SESSION_INDEX_KEY = 'llamaChatIndex';
+        const SESSION_DATA_PREFIX = 'llamaChatSession_';
+        const DEFAULT_SESSION_NAME = 'Новый чат';
+        const MAX_TEXT_FILE_EMBED_SIZE = 200 * 1024;
+        const elements = {
+            openAiBaseUrl: document.getElementById('openAiBaseUrl'),
+            openAiModel: document.getElementById('openAiModel'),
+            llmApiStyle: document.getElementById('llmApiStyle'),
+            llmApiKey: document.getElementById('llmApiKey'),
+            chatInput: document.getElementById('chatInput'),
+            sendButton: document.getElementById('sendButton'),
+            statusBar: document.getElementById('statusBar'),
+            headerStatus: document.getElementById('headerStatus'),
+            chatContainer: document.getElementById('chatContainer'),
+            harnessLayout: document.getElementById('harness-layout'),
+            paletteBootstrap: document.getElementById('palette-bootstrap'),
+            paletteSelect: document.getElementById('paletteSelect'),
+            brightnessSelect: document.getElementById('brightnessSelect'),
+            sidebarCollapsedPref: document.getElementById('sidebarCollapsedPref'),
+            sidebarToggle: document.getElementById('sidebarToggle'),
+            sidebarExpand: document.getElementById('sidebarExpand'),
+            headerMenuBtn: document.getElementById('headerMenuBtn'),
+            headerMenuDropdown: document.getElementById('headerMenuDropdown'),
+            headerSettingsBtn: document.getElementById('headerSettingsBtn'),
+            temperature: document.getElementById('temperature'),
+            contextWindow: document.getElementById('contextWindow'),
+            sessionsList: document.getElementById('sessionsList'),
+            newChatBtn: document.getElementById('newChatBtn'),
+            fileInput: document.getElementById('fileInput'),
+            stagedFilesArea: document.getElementById('stagedFilesArea'),
+            settingsModal: document.getElementById('settingsModal'),
+            highlightTheme: document.getElementById('highlight-theme'),
+            composeContext: document.getElementById('composeContext'),
+            contextMeter: document.getElementById('contextMeter'),
+            contextRingFill: document.getElementById('contextRingFill')
+        };
+        const CONTEXT_RING_CIRCUMFERENCE = 2 * Math.PI * 9;
+        const DEMO_SEED_VERSION = '2026-10-23-charts';
+        const DEMO_SEED_FLAG = `llamaDemoSeed_${DEMO_SEED_VERSION}`;
+        let contextMeterTooltip = null;
+        const SEND_BUTTON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>';
+        let chatHistory = [];
+        let messageCounter = 0;
+        let currentSessionId = null;
+        let currentAbortController = null;
+        let stagedFiles = [];
+        let harnessHostResponseResolver = null;
+        let openSessionMenuId = null;
+        function harnessBackendEnabled() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('backend') === '1c' || window.__1CHarnessBackend === true;
+        }
+        function harnessPostToHost(envelope) {
+            const json = JSON.stringify(envelope);
+            const bridge = document.getElementById('harness-1c-bridge');
+            if (bridge) {
+                bridge.textContent = json;
+                bridge.dataset.seq = String(Date.now());
+            }
+            try {
+                if (window.HarnessNative && typeof window.HarnessNative.postMessage === 'function') {
+                    window.HarnessNative.postMessage(json);
+                }
+            } catch (e) { /* not in 1C host */ }
+            document.dispatchEvent(new CustomEvent('harness-1c-request', { detail: envelope }));
+        }
+        window.harnessDeliverResponse = function(payload) {
+            const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
+            if (harnessHostResponseResolver) {
+                harnessHostResponseResolver(data);
+                harnessHostResponseResolver = null;
+            }
+        };
+        function waitHarnessHostResponse(timeoutMs) {
+            return new Promise((resolve) => {
+                const timer = setTimeout(() => {
+                    harnessHostResponseResolver = null;
+                    resolve(null);
+                }, timeoutMs);
+                harnessHostResponseResolver = (data) => {
+                    clearTimeout(timer);
+                    resolve(data);
+                };
+            });
+        }
+        function harnessDefaultReply(userText) {
+            const line = String(userText || '').split('\n').find(l => l.trim()) || '(пусто)';
+            return `**1СХарнесс (v0.2)**\n\nЗапрос принят на стороне 1С. Модуль ответа пока заглушка — подключите \`ОбработатьСообщение\` в модуле формы обработки.\n\n> ${line.trim().slice(0, 200)}`;
+        }
+        function getHighlightUrls(palette) {
+            if (palette === 'taxi') {
+                return {
+                    light: 'vendor/highlight.js/11.9.0/styles/1c-taxi-light.css',
+                    dark: 'vendor/highlight.js/11.9.0/styles/1c-taxi-dark.css'
+                };
+            }
+            return {
+                light: 'vendor/highlight.js/11.9.0/styles/krabobot-light.css',
+                dark: 'vendor/highlight.js/11.9.0/styles/krabobot-dark.css'
+            };
+        }
+        function setPalette(palette) {
+            const p = palette === 'taxi' ? 'taxi' : 'krabobot';
+            document.documentElement.setAttribute('data-palette', p);
+            if (elements.paletteBootstrap) {
+                elements.paletteBootstrap.href = p === 'taxi'
+                    ? 'vendor/theme/1c-taxi.css'
+                    : 'vendor/theme/krabobot.css';
+            }
+            localStorage.setItem('harnessPalette', p);
+            if (elements.paletteSelect) elements.paletteSelect.value = p;
+            const theme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+            const urls = getHighlightUrls(p);
+            elements.highlightTheme.href = theme === 'dark' ? urls.dark : urls.light;
+        }
+        function setTheme(theme) {
+            const t = theme === 'dark' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-bs-theme', t);
+            localStorage.setItem('theme', t);
+            if (elements.brightnessSelect) elements.brightnessSelect.value = t;
+            const palette = document.documentElement.getAttribute('data-palette') || 'krabobot';
+            const urls = getHighlightUrls(palette);
+            elements.highlightTheme.href = t === 'dark' ? urls.dark : urls.light;
+        }
+        function setSidebarCollapsed(collapsed) {
+            if (!elements.harnessLayout) return;
+            elements.harnessLayout.classList.toggle('kb-layout--sidebar-collapsed', collapsed);
+            if (elements.sidebarToggle) {
+                elements.sidebarToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            }
+            if (elements.sidebarExpand) {
+                elements.sidebarExpand.hidden = !collapsed;
+            }
+        }
+        function initializeAppearance() {
+            const palette = localStorage.getItem('harnessPalette') || 'krabobot';
+            setPalette(palette);
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            setTheme(savedTheme);
+            const collapsed = localStorage.getItem('harnessSidebarCollapsed') === 'true';
+            if (elements.sidebarCollapsedPref) elements.sidebarCollapsedPref.checked = collapsed;
+            setSidebarCollapsed(collapsed);
+        }
+        async function loadAgentConnectionSettings() {
+            if (!harnessAgentMode() || !window.HarnessAgent?.workspaceConfigReady) return;
+            await window.HarnessAgent.workspaceConfigReady;
+            const c = window.HarnessAgent.getConnectionSettings();
+            if (elements.openAiBaseUrl) elements.openAiBaseUrl.value = c.apiBase || 'https://ollama.com/v1';
+            if (elements.openAiModel) elements.openAiModel.value = c.model || 'gemma4:31b-cloud';
+            if (elements.llmApiStyle) elements.llmApiStyle.value = c.apiStyle || 'openai';
+            if (elements.llmApiKey) elements.llmApiKey.value = c.apiKey ? '••••••••' : '';
+        }
+        async function saveAgentConnectionSettings() {
+            if (!harnessAgentMode() || !window.HarnessAgent?.updateConnectionSettings) return;
+            const patch = {
+                apiBase: elements.openAiBaseUrl?.value.trim(),
+                apiStyle: elements.llmApiStyle?.value,
+                model: elements.openAiModel?.value.trim(),
+            };
+            const keyInput = elements.llmApiKey?.value?.trim();
+            if (keyInput && keyInput !== '••••••••') patch.apiKey = keyInput;
+            await window.HarnessAgent.updateConnectionSettings(patch);
+            if (elements.llmApiKey && patch.apiKey) elements.llmApiKey.value = '••••••••';
+        }
+        function harnessAgentMode() {
+            return window.HarnessAgent?.enabled?.() !== false;
+        }
+        async function initialize() {
+            if (harnessAgentMode() && window.HarnessAgent?.workspaceConfigReady) {
+                await window.HarnessAgent.workspaceConfigReady;
+            }
+            await loadAgentConnectionSettings();
+            loadGenerationSettings();
+            setupEventListeners();
+            initializeAppearance();
+            configureMarked();
+            initContextMeterTooltip();
+            const cfg = window.HarnessAgent?.getAgentConfig?.();
+            showStatus(`Агент: ${cfg?.model || 'gemma4:31b-cloud'} (OpenAI API), инструменты → мост 1С.`, 'info');
+            const demoMode = isDemoMode();
+            if (demoMode) seedDemoSessionsIfNeeded();
+            populateSessions();
+            if (demoMode) {
+                const sessions = getSessionIndex();
+                if (sessions.length) openSessionSilently(sessions[0].id);
+                else startNewSession();
+            } else {
+                startNewSession();
+            }
+            updateSendButtonState();
+            updateComposeContext();
+            updateContextMeter();
+        }
+        function isDemoMode() {
+            const params = new URLSearchParams(window.location.search);
+            return params.has('demo') || window.location.hash === '#demo';
+        }
+        function loadGenerationSettings() {
+            const savedCtx = localStorage.getItem('llamaContextWindow');
+            if (savedCtx && elements.contextWindow) elements.contextWindow.value = savedCtx;
+        }
+        function saveContextWindowSetting() {
+            if (elements.contextWindow) {
+                localStorage.setItem('llamaContextWindow', elements.contextWindow.value);
+            }
+        }
+        function getContextWindowLimit() {
+            const n = parseInt(elements.contextWindow?.value, 10);
+            return Number.isFinite(n) && n > 0 ? n : 32768;
+        }
+        function estimateTokens(text) {
+            if (!text) return 0;
+            return Math.ceil(String(text).length / 3.5);
+        }
+        function estimateContextUsageTokens() {
+            let total = 0;
+            chatHistory.forEach(m => { total += estimateTokens(m.content); });
+            total += estimateTokens(elements.chatInput.value);
+            stagedFiles.forEach(f => {
+                if (f.content && typeof f.content === 'string' && !f.content.startsWith('data:')) {
+                    total += estimateTokens(f.content);
+                }
+            });
+            return total;
+        }
+        function initContextMeterTooltip() {
+            if (!elements.contextMeter) return;
+            contextMeterTooltip = bootstrap.Tooltip.getOrCreateInstance(elements.contextMeter, {
+                trigger: 'hover focus',
+                customClass: 'context-meter-tooltip'
+            });
+        }
+        function updateContextMeter() {
+            if (!elements.contextRingFill || !elements.contextMeter) return;
+            const used = estimateContextUsageTokens();
+            const limit = getContextWindowLimit();
+            const ratio = limit > 0 ? Math.min(1, used / limit) : 0;
+            const offset = CONTEXT_RING_CIRCUMFERENCE * (1 - ratio);
+            elements.contextRingFill.setAttribute('stroke-dasharray', String(CONTEXT_RING_CIRCUMFERENCE));
+            elements.contextRingFill.setAttribute('stroke-dashoffset', String(offset));
+            elements.contextMeter.classList.remove('is-warning', 'is-danger');
+            if (ratio >= 0.9) elements.contextMeter.classList.add('is-danger');
+            else if (ratio >= 0.7) elements.contextMeter.classList.add('is-warning');
+            const pct = Math.round(ratio * 100);
+            const tip = `<strong>Контекст: ~${used.toLocaleString('ru-RU')} / ${limit.toLocaleString('ru-RU')} токенов</strong> (${pct}%)<br>`
+                + 'Учитываются сообщения диалога, черновик в поле ввода и текст вложений. '
+                + 'Кольцо показывает, насколько близко к лимиту контекстного окна модели. '
+                + 'Размер окна задаётся в <em>Настройки → Генерация → Размер контекста</em>.';
+            elements.contextMeter.setAttribute('data-bs-original-title', tip);
+            elements.contextMeter.setAttribute('title', tip);
+            if (contextMeterTooltip) contextMeterTooltip.setContent({ '.tooltip-inner': tip });
+        }
+        function seedDemoSessionsIfNeeded() {
+            const params = new URLSearchParams(window.location.search);
+            const force = params.get('demo') === 'reset' || params.get('demo') === 'fresh';
+            if (!force && localStorage.getItem(DEMO_SEED_FLAG) === '1') return;
+            getSessionIndex().forEach(s => localStorage.removeItem(`${SESSION_DATA_PREFIX}${s.id}`));
+            saveSessionIndex([]);
+            const now = Date.now();
+            const demos = [
+                {
+                    id: `demo-${now}-1`,
+                    name: 'Обороты по счёту 51',
+                    updatedAt: now,
+                    history: [
+                        { role: 'user', content: 'Сформируй обороты по счёту 51 за март 2026 по организациям. Нужна таблица: организация, начальный остаток, приход, расход, конечный остаток.', id: 'demo-u1' },
+                        { role: 'model', content: `Сделал запрос к регистру бухгалтерии и свёл по **Организация**.
+
+| Организация | Начало | Приход | Расход | Конец |
+| --- | ---: | ---: | ---: | ---: |
+| ООО «Ромашка» | 1 240 000 | 890 000 | 720 000 | 1 410 000 |
+| ИП Иванов | 85 000 | 120 000 | 95 000 | 110 000 |
+
+Фрагмент запроса, который ушёл в 1С:
+
+\`\`\`bsl
+ВЫБРАТЬ
+    Организация.Наименование КАК Организация,
+    СУММА(НачальныйОстаток) КАК Начало,
+    СУММА(ОборотДт) КАК Приход,
+    СУММА(ОборотКт) КАК Расход,
+    СУММА(КонечныйОстаток) КАК Конец
+ИЗ
+    РегистрБухгалтерии.Хозрасчетный.ОстаткиИОбороты(, , Месяц, , Счет = &Счет51) КАК Д
+СГРУППИРОВАТЬ ПО
+    Организация.Наименование
+\`\`\`
+
+**Графики по тем же данным:**
+
+<div class="h-chart-grid">
+<figure class="h-chart-wrap"><figcaption>Конечный остаток по организациям (столбцы)</figcaption><canvas class="h-chart" data-harness-chart='{"type":"bar","labels":["ООО «Ромашка»","ИП Иванов"],"datasets":[{"label":"Конец, ₽","data":[1410000,110000]}]}'></canvas></figure>
+<figure class="h-chart-wrap"><figcaption>Остаток на 51 счёте по дням, март (линия)</figcaption><canvas class="h-chart" data-harness-chart='{"type":"line","labels":["01","05","10","15","20","25","31"],"datasets":[{"label":"Остаток, ₽","data":[1325000,1280000,1350000,1410000,1385000,1520000,1520000]}]}'></canvas></figure>
+<figure class="h-chart-wrap"><figcaption>Доля прихода за месяц (круг)</figcaption><canvas class="h-chart" data-harness-chart='{"type":"pie","labels":["ООО «Ромашка»","ИП Иванов"],"datasets":[{"label":"Приход","data":[890000,120000]}]}'></canvas></figure>
+<figure class="h-chart-wrap"><figcaption>Структура расхода (кольцо)</figcaption><canvas class="h-chart" data-harness-chart='{"type":"doughnut","labels":["ООО «Ромашка»","ИП Иванов"],"datasets":[{"label":"Расход","data":[720000,95000]}]}'></canvas></figure>
+</div>
+
+Могу выгрузить в Excel или добавить фильтр по подразделению.`, id: 'demo-m1' }
+                    ]
+                },
+                {
+                    id: `demo-${now}-2`,
+                    name: 'Медленный запрос Номенклатура',
+                    updatedAt: now - 60000,
+                    history: [
+                        { role: 'user', content: 'Почему отчёт «Остатки номенклатуры» считается 40 секунд? Конфигурация УТ 11.', id: 'demo-u2' },
+                        { role: 'model', content: `По журналу выполнения вижу три узких места:
+
+1. **Полное сканирование** регистра \`ТоварыНаСкладах\` без отбора по складу.
+2. **Соединение** с справочником номенклатуры по строковому артикулу вместо ссылки.
+3. **RLS** — для пользователя «Менеджер» включён отбор по 1200 группам доступа.
+
+Рекомендации:
+- добавить обязательный параметр «Склад»;
+- заменить соединение на \`Номенклатура.Ссылка\`;
+- включить **итоги** по измерению «Склад».
+
+> После правки типовый прогон на тестовой базе: **4,2 с** вместо 40 с.
+
+Нужно подготовить патч обработки или только текст для разработчика?`, id: 'demo-m2' }
+                    ]
+                },
+                {
+                    id: `demo-${now}-3`,
+                    name: 'Анонимизация перед LLM',
+                    updatedAt: now - 120000,
+                    history: [
+                        { role: 'user', content: 'Перед отправкой в модель нужно скрыть ИНН и телефоны в тексте вложения. Покажи как это будет выглядеть.', id: 'demo-u3' },
+                        { role: 'model', content: `В 1СХарнесс включён слой **анонимизации** (маски вместо PII):
+
+**Было:**
+\`\`\`text
+Контрагент ООО Вектор, ИНН 7701234567, tel +7 (495) 123-45-67
+\`\`\`
+
+**Уходит в LLM:**
+\`\`\`text
+Контрагент {{ORG_1}}, ИНН {{INN_1}}, tel {{PHONE_1}}
+\`\`\`
+
+Обратная подстановка выполняется только на стороне 1С при показе пользователю; в логах хранятся уже замаскированные значения.
+
+\`\`\`bsl
+Функция Анонимизировать(Текст, СоответствиеМасок)
+    // … поиск по шаблонам ИНН, телефон, email …
+    Возврат Новый Структура("Текст, Карта", Текст, СоответствиеМасок);
+КонецФункции
+\`\`\`
+
+Стриминг ответа при включённой анонимизации пока отключён — это отражено в ТЗ.`, id: 'demo-m3' }
+                    ]
+                }
+            ];
+            const index = demos.map(d => ({ id: d.id, name: d.name, updatedAt: d.updatedAt }));
+            demos.forEach(d => {
+                localStorage.setItem(`${SESSION_DATA_PREFIX}${d.id}`, JSON.stringify(d.history));
+            });
+            saveSessionIndex(index);
+            localStorage.setItem(DEMO_SEED_FLAG, '1');
+            showStatus('Демо-диалоги загружены (таблица + графики в «Обороты по счёту 51»).', 'info');
+        }
+        function openSessionSilently(sessionId) {
+            try {
+                const historyJson = localStorage.getItem(`${SESSION_DATA_PREFIX}${sessionId}`);
+                chatHistory = JSON.parse(historyJson) || [];
+                messageCounter = chatHistory.length;
+                currentSessionId = sessionId;
+                renderChatHistory();
+                populateSessions();
+            } catch {
+                startNewSession();
+            }
+        }
+        function configureMarked() {
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language, ignoreIllegals: true }).value;
+                },
+                gfm: true,
+                breaks: true,
+                langPrefix: 'hljs language-',
+            });
+        }
+        function harnessChartPalette() {
+            const taxi = document.documentElement.getAttribute('data-palette') === 'taxi';
+            const dark = (document.documentElement.getAttribute('data-bs-theme') || 'light') === 'dark';
+            if (taxi) {
+                return {
+                    colors: ['#ffe289', '#5c7a8a', '#e6c85a', '#8aa4c0', '#fff5c0'],
+                    grid: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                    text: dark ? '#e8f0fb' : '#404040'
+                };
+            }
+            return {
+                colors: ['#007bff', '#0d8f4a', '#00e5ff', '#5a6f85', '#004080'],
+                grid: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,51,102,0.08)',
+                text: dark ? '#8aa4c0' : '#5a6f85'
+            };
+        }
+        function destroyHarnessCharts(container) {
+            if (typeof Chart === 'undefined' || !container) return;
+            container.querySelectorAll('canvas.h-chart').forEach((canvas) => {
+                const existing = Chart.getChart(canvas);
+                if (existing) existing.destroy();
+            });
+        }
+        function buildHarnessChartConfig(spec) {
+            const pal = harnessChartPalette();
+            const datasets = (spec.datasets || []).map((ds, i) => ({
+                ...ds,
+                backgroundColor: ds.backgroundColor || (spec.type === 'line'
+                    ? pal.colors[i % pal.colors.length] + '33'
+                    : pal.colors.map((c, j) => pal.colors[(i + j) % pal.colors.length])),
+                borderColor: ds.borderColor || pal.colors[i % pal.colors.length],
+                borderWidth: ds.borderWidth ?? (spec.type === 'line' ? 2 : 1),
+                tension: ds.tension ?? 0.25,
+                fill: ds.fill ?? (spec.type === 'line' ? false : true)
+            }));
+            return {
+                type: spec.type === 'hbar' ? 'bar' : (spec.type || 'bar'),
+                data: { labels: spec.labels || [], datasets },
+                options: {
+                    indexAxis: spec.type === 'hbar' ? 'y' : 'x',
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: datasets.length > 1 || ['pie', 'doughnut'].includes(spec.type),
+                            labels: { color: pal.text, boxWidth: 12, font: { size: 11 } }
+                        }
+                    },
+                    scales: ['pie', 'doughnut', 'radar'].includes(spec.type) ? {} : {
+                        x: { ticks: { color: pal.text, maxRotation: 0, autoSkip: true }, grid: { color: pal.grid } },
+                        y: { ticks: { color: pal.text }, grid: { color: pal.grid } }
+                    }
+                }
+            };
+        }
+        function initHarnessCharts(container) {
+            if (typeof Chart === 'undefined' || !container) return;
+            container.querySelectorAll('canvas.h-chart[data-harness-chart]').forEach((canvas) => {
+                if (Chart.getChart(canvas)) return;
+                let spec;
+                try {
+                    spec = JSON.parse(canvas.getAttribute('data-harness-chart'));
+                } catch (e) {
+                    return;
+                }
+                new Chart(canvas.getContext('2d'), buildHarnessChartConfig(spec));
+            });
+        }
+        function refreshChartsInChat() {
+            if (!elements.chatContainer) return;
+            elements.chatContainer.querySelectorAll('.kb-msg-body').forEach((body) => {
+                destroyHarnessCharts(body);
+                initHarnessCharts(body);
+            });
+        }
+        function setupEventListeners() {
+            elements.sendButton.addEventListener('click', () => {
+                if (currentAbortController) handleStopGeneration();
+                else handleSendPrompt();
+            });
+            elements.newChatBtn.addEventListener('click', () => startNewSession());
+            if (elements.paletteSelect) {
+                elements.paletteSelect.addEventListener('change', () => {
+                    setPalette(elements.paletteSelect.value);
+                    refreshChartsInChat();
+                });
+            }
+            if (elements.brightnessSelect) {
+                elements.brightnessSelect.addEventListener('change', () => {
+                    setTheme(elements.brightnessSelect.value);
+                    refreshChartsInChat();
+                });
+            }
+            if (elements.sidebarCollapsedPref) {
+                elements.sidebarCollapsedPref.addEventListener('change', () => {
+                    localStorage.setItem('harnessSidebarCollapsed', elements.sidebarCollapsedPref.checked ? 'true' : 'false');
+                    setSidebarCollapsed(elements.sidebarCollapsedPref.checked);
+                });
+            }
+            if (elements.sidebarToggle) {
+                elements.sidebarToggle.addEventListener('click', () => {
+                    const collapsed = !elements.harnessLayout.classList.contains('kb-layout--sidebar-collapsed');
+                    setSidebarCollapsed(collapsed);
+                    localStorage.setItem('harnessSidebarCollapsed', collapsed ? 'true' : 'false');
+                    if (elements.sidebarCollapsedPref) elements.sidebarCollapsedPref.checked = collapsed;
+                });
+            }
+            if (elements.sidebarExpand) {
+                elements.sidebarExpand.addEventListener('click', () => {
+                    setSidebarCollapsed(false);
+                    localStorage.setItem('harnessSidebarCollapsed', 'false');
+                    if (elements.sidebarCollapsedPref) elements.sidebarCollapsedPref.checked = false;
+                });
+            }
+            setupHeaderMenu();
+            if (elements.headerSettingsBtn) {
+                elements.headerSettingsBtn.addEventListener('click', () => {
+                    closeHeaderMenu();
+                    bootstrap.Modal.getOrCreateInstance(elements.settingsModal).show();
+                });
+            }
+            if (elements.contextWindow) {
+                elements.contextWindow.addEventListener('change', () => {
+                    saveContextWindowSetting();
+                    updateContextMeter();
+                });
+                elements.contextWindow.addEventListener('input', updateContextMeter);
+            }
+            if (elements.openAiBaseUrl) elements.openAiBaseUrl.addEventListener('change', saveAgentConnectionSettings);
+            if (elements.openAiModel) elements.openAiModel.addEventListener('change', saveAgentConnectionSettings);
+            if (elements.llmApiStyle) elements.llmApiStyle.addEventListener('change', saveAgentConnectionSettings);
+            if (elements.llmApiKey) elements.llmApiKey.addEventListener('change', saveAgentConnectionSettings);
+            elements.chatInput.addEventListener('input', () => {
+                updateSendButtonState();
+                autoResizeTextarea(elements.chatInput);
+                updateContextMeter();
+            });
+            elements.chatInput.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter' || event.isComposing) return;
+                if (event.shiftKey) return;
+                event.preventDefault();
+                if (!elements.sendButton.disabled && !currentAbortController) {
+                    handleSendPrompt();
+                }
+            });
+            elements.fileInput.addEventListener('change', handleFileSelection);
+            elements.stagedFilesArea.addEventListener('click', handleRemoveStagedFile);
+            elements.chatContainer.addEventListener('click', function(event) {
+                if (event.target.classList.contains('copy-code-button')) handleCopyCodeClick(event.target);
+                else if (event.target.classList.contains('download-code-button')) handleDownloadCodeClick(event.target);
+            });
+            elements.settingsModal.addEventListener('shown.bs.modal', () => {
+                if (elements.paletteSelect) elements.paletteSelect.value = document.documentElement.getAttribute('data-palette') || 'krabobot';
+                if (elements.brightnessSelect) elements.brightnessSelect.value = document.documentElement.getAttribute('data-bs-theme') || 'light';
+            });
+            elements.sessionsList.addEventListener('click', function(event) {
+                const actionBtn = event.target.closest('[data-session-action]');
+                if (actionBtn) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const row = actionBtn.closest('[data-session-id]');
+                    if (!row) return;
+                    const sessionId = row.dataset.sessionId;
+                    const action = actionBtn.dataset.sessionAction;
+                    if (action === 'rename') handleRenameSession(sessionId);
+                    else if (action === 'delete') handleDeleteSession(sessionId);
+                    return;
+                }
+                const menuBtn = event.target.closest('.kb-sess-menu-btn');
+                if (menuBtn) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const row = menuBtn.closest('[data-session-id]');
+                    if (!row) return;
+                    const dropdown = row.querySelector('.kb-sess-dropdown');
+                    if (!dropdown) return;
+                    const sid = row.dataset.sessionId;
+                    if (openSessionMenuId && openSessionMenuId !== sid) {
+                        const prev = elements.sessionsList.querySelector(`[data-session-id="${openSessionMenuId}"] .kb-sess-dropdown`);
+                        if (prev) prev.hidden = true;
+                    }
+                    dropdown.hidden = !dropdown.hidden;
+                    menuBtn.setAttribute('aria-expanded', dropdown.hidden ? 'false' : 'true');
+                    openSessionMenuId = dropdown.hidden ? null : sid;
+                    return;
+                }
+                const openBtn = event.target.closest('.kb-sess-btn');
+                if (openBtn) {
+                    const row = openBtn.closest('[data-session-id]');
+                    if (row) handleLoadSession(row.dataset.sessionId);
+                }
+            });
+            document.addEventListener('click', (event) => {
+                if (!event.target.closest('.kb-sess-menu-wrap')) {
+                    elements.sessionsList.querySelectorAll('.kb-sess-dropdown').forEach(el => { el.hidden = true; });
+                    openSessionMenuId = null;
+                }
+            });
+        }
+        function setupHeaderMenu() {
+            if (!elements.headerMenuBtn || !elements.headerMenuDropdown) return;
+            elements.headerMenuBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const open = elements.headerMenuDropdown.hidden;
+                elements.headerMenuDropdown.hidden = !open;
+                elements.headerMenuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+            document.addEventListener('click', () => closeHeaderMenu());
+        }
+        function closeHeaderMenu() {
+            if (!elements.headerMenuDropdown) return;
+            elements.headerMenuDropdown.hidden = true;
+            if (elements.headerMenuBtn) elements.headerMenuBtn.setAttribute('aria-expanded', 'false');
+        }
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+        }
+        function updateSendButtonState() {
+            if (currentAbortController) {
+                elements.sendButton.disabled = false;
+                return;
+            }
+            const isLoading = (elements.headerStatus && elements.headerStatus.querySelector('.kb-status-spinner')) ||
+                (elements.statusBar && elements.statusBar.querySelector('.spinner-border') !== null);
+            const canSend = !isLoading && (elements.chatInput.value.trim().length > 0 || stagedFiles.length > 0);
+            elements.sendButton.disabled = !canSend;
+        }
+        function handleFileSelection(event) {
+            const files = event.target.files;
+            if (!files) return;
+            showLoading(true, "Обработка файлов…");
+            const newFiles = Array.from(files).filter(f => !stagedFiles.some(sf => sf.name === f.name));
+            if (newFiles.length !== files.length) showStatus("Файлы с одинаковыми именами пропущены.", "warning");
+            if (newFiles.length === 0) {
+                showLoading(false);
+                return;
+            }
+            let filesProcessed = 0;
+            newFiles.forEach(file => {
+                const reader = new FileReader();
+                const fileData = { file, name: file.name, type: file.type, content: null, error: null };
+                stagedFiles.push(fileData);
+                reader.onload = e => {
+                    fileData.content = e.target.result;
+                    filesProcessed++;
+                    if (filesProcessed === newFiles.length) finishFileProcessing();
+                };
+                reader.onerror = e => {
+                    fileData.error = `Error reading file: ${e.target.error?.message || 'Unknown'}`;
+                    filesProcessed++;
+                    if (filesProcessed === newFiles.length) finishFileProcessing();
+                };
+                if (file.type.startsWith('text/') || /\.(txt|md|py|js|html|css|json|xml|csv|log)$/i.test(file.name)) {
+                    reader.readAsText(file);
+                } else {
+                    reader.readAsDataURL(file);
+                }
+            });
+            renderStagedFiles();
+            event.target.value = null;
+        }
+        function finishFileProcessing() {
+            renderStagedFiles();
+            showLoading(false);
+            updateSendButtonState();
+            elements.chatInput.focus();
+        }
+        function renderStagedFiles() {
+            elements.stagedFilesArea.innerHTML = '';
+            stagedFiles.forEach((fileData, index) => {
+                const item = document.createElement('div');
+                item.className = `badge d-flex align-items-center ${fileData.error ? 'text-bg-danger' : 'text-bg-secondary'}`;
+                item.title = fileData.name + (fileData.error ? ` (ошибка: ${fileData.error})` : '');
+                item.innerHTML = `
+                    <span class="me-2">${escapeHtml(fileData.name)}</span>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Убрать файл" data-index="${index}"></button>
+                `;
+                elements.stagedFilesArea.appendChild(item);
+            });
+            updateSendButtonState();
+            updateContextMeter();
+        }
+        function setSendButtonMode(mode) {
+            if (mode === 'stop') {
+                elements.sendButton.classList.add('is-stop');
+                elements.sendButton.innerHTML = '<span class="compose-stop" aria-hidden="true"></span>';
+                elements.sendButton.title = 'Остановить';
+                elements.sendButton.setAttribute('aria-label', 'Остановить');
+            } else {
+                elements.sendButton.classList.remove('is-stop');
+                elements.sendButton.innerHTML = SEND_BUTTON_SVG;
+                elements.sendButton.title = 'Отправить';
+                elements.sendButton.setAttribute('aria-label', 'Отправить');
+            }
+        }
+        function updateComposeContext() {
+            if (!elements.composeContext) return;
+            if (!currentSessionId) {
+                elements.composeContext.textContent = chatHistory.length ? 'Черновик' : '1СХарнесс';
+                updateContextMeter();
+                return;
+            }
+            const session = getSessionIndex().find(s => s.id === currentSessionId);
+            elements.composeContext.textContent = session ? session.name : '1СХарнесс';
+            updateContextMeter();
+        }
+        function handleRemoveStagedFile(event) {
+            if (event.target.matches('[data-index]')) {
+                const indexToRemove = parseInt(event.target.dataset.index, 10);
+                stagedFiles.splice(indexToRemove, 1);
+                renderStagedFiles();
+            }
+        }
+        function clearStagedFiles() {
+            stagedFiles = [];
+            renderStagedFiles();
+            elements.fileInput.value = null;
+        }
+        async function handleSendPrompt1C(promptText, fullUserContent) {
+            setSendButtonMode('stop');
+            elements.chatInput.disabled = true;
+            if (currentAbortController) currentAbortController.abort();
+            currentAbortController = new AbortController();
+            const userMessage = { role: 'user', content: fullUserContent, id: `msg-${messageCounter++}` };
+            chatHistory.push(userMessage);
+            persistCurrentSession();
+            renderChatHistory();
+            elements.chatInput.value = '';
+            autoResizeTextarea(elements.chatInput);
+            clearStagedFiles();
+            showLoading(true, '1С…');
+            const modelMessage = { role: 'model', content: '', id: `msg-${messageCounter++}` };
+            chatHistory.push(modelMessage);
+            renderChatHistory();
+            const envelope = {
+                type: 'chat.completion',
+                messages: chatHistory.slice(0, -1).map(m => ({
+                    role: m.role === 'model' ? 'assistant' : m.role,
+                    content: m.content
+                }))
+            };
+            harnessPostToHost(envelope);
+            try {
+                const hostData = await waitHarnessHostResponse(12000);
+                if (currentAbortController?.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+                if (hostData && (hostData.content || hostData.text)) {
+                    modelMessage.content = hostData.content || hostData.text;
+                } else if (hostData && hostData.error) {
+                    modelMessage.content = `**Ошибка 1С:** ${hostData.error}`;
+                } else {
+                    modelMessage.content = harnessDefaultReply(promptText);
+                }
+                showStatus('Ответ от 1С.', 'success');
+                persistCurrentSession();
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    showStatus('Запрос остановлен.', 'info');
+                    if (chatHistory[chatHistory.length - 1].content.length < 15) chatHistory.pop();
+                    chatHistory.pop();
+                } else {
+                    showStatus(`Ошибка: ${error.message}`, 'danger');
+                    chatHistory.pop();
+                    chatHistory.pop();
+                    elements.chatInput.value = promptText;
+                    autoResizeTextarea(elements.chatInput);
+                }
+                renderChatHistory();
+            } finally {
+                updateModelBubbleContent(modelMessage.id, modelMessage.content, false);
+                resetButtonToSendState();
+                showLoading(false);
+                elements.chatInput.disabled = false;
+                currentAbortController = null;
+                updateSendButtonState();
+                elements.chatInput.focus();
+            }
+        }
+        function chatHistoryToOpenAiTurn(excludeLastAssistant) {
+            const list = excludeLastAssistant ? chatHistory.slice(0, -1) : chatHistory;
+            return list.map(m => ({
+                role: m.role === 'model' ? 'assistant' : m.role === 'user' ? 'user' : m.role,
+                content: m.content || ''
+            })).filter(m => m.role === 'user' || m.role === 'assistant');
+        }
+        async function handleSendPromptAgent(promptText, fullUserContent) {
+            setSendButtonMode('stop');
+            elements.chatInput.disabled = true;
+            if (currentAbortController) currentAbortController.abort();
+            currentAbortController = new AbortController();
+            const userMessage = { role: 'user', content: fullUserContent, id: `msg-${messageCounter++}` };
+            chatHistory.push(userMessage);
+            persistCurrentSession();
+            renderChatHistory();
+            elements.chatInput.value = '';
+            autoResizeTextarea(elements.chatInput);
+            clearStagedFiles();
+            showLoading(true, 'Агент…');
+            const modelMessage = { role: 'model', content: '', id: `msg-${messageCounter++}` };
+            chatHistory.push(modelMessage);
+            renderChatHistory();
+            const toolNotes = [];
+            try {
+                const temperature = parseFloat(elements.temperature.value);
+                const result = await window.HarnessAgent.runHarnessAgentTurn({
+                    turnMessages: chatHistoryToOpenAiTurn(true),
+                    signal: currentAbortController.signal,
+                    temperature: Number.isFinite(temperature) ? temperature : 0.4,
+                    onToolEvent(ev) {
+                        if (ev.phase === 'start') showLoading(true, `1С: ${ev.name}…`);
+                        if (ev.phase === 'end' && ev.ok === false && ev.error) {
+                            toolNotes.push(`**${ev.name}:** ${ev.error}`);
+                        }
+                    },
+                });
+                if (currentAbortController?.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+                let content = result.content || '_(пустой ответ)_';
+                if (toolNotes.length && /^(error|ошибка)\.?$/i.test(content.trim())) {
+                    content = toolNotes.join('\n\n');
+                }
+                for (const spec of result.charts || []) {
+                    const payload = JSON.stringify(spec).replace(/'/g, '&#39;');
+                    const title = spec.title ? `<figcaption>${escapeHtml(spec.title)}</figcaption>` : '';
+                    content += `\n\n<figure class="h-chart-wrap">${title}<canvas class="h-chart" data-harness-chart='${payload}'></canvas></figure>`;
+                }
+                modelMessage.content = content;
+                showStatus('Ответ получен.', 'success');
+                persistCurrentSession();
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    showStatus('Запрос остановлен.', 'info');
+                    if (chatHistory[chatHistory.length - 1].content.length < 15) chatHistory.pop();
+                    chatHistory.pop();
+                } else {
+                    showStatus(`Ошибка: ${error.message}`, 'danger');
+                    chatHistory.pop();
+                    chatHistory.pop();
+                    elements.chatInput.value = promptText;
+                    autoResizeTextarea(elements.chatInput);
+                }
+                renderChatHistory();
+            } finally {
+                updateModelBubbleContent(modelMessage.id, modelMessage.content, false);
+                resetButtonToSendState();
+                showLoading(false);
+                elements.chatInput.disabled = false;
+                currentAbortController = null;
+                updateSendButtonState();
+                elements.chatInput.focus();
+            }
+        }
+        async function handleSendPrompt() {
+            setSendButtonMode('stop');
+            elements.chatInput.disabled = true;
+            let promptText = elements.chatInput.value.trim();
+            if (!promptText && stagedFiles.length === 0) {
+                showStatus("Сообщение не может быть пустым.", "warning");
+                resetButtonToSendState();
+                elements.chatInput.disabled = false;
+                return;
+            }
+            const filesWithError = stagedFiles.filter(f => f.error);
+            if (filesWithError.length > 0) {
+                showStatus(`Ошибка чтения файлов: ${filesWithError.map(f => f.name).join(', ')}`, "danger");
+                resetButtonToSendState();
+                elements.chatInput.disabled = false;
+                return;
+            }
+            let fileInfoForPrompt = "";
+            if (stagedFiles.length > 0) {
+                fileInfoForPrompt = "Attached Files:\n";
+                stagedFiles.forEach(fileData => {
+                    fileInfoForPrompt += `[File: ${fileData.name} (${fileData.type})]\n`;
+                    if (fileData.type.startsWith('text/') && fileData.content && fileData.content.length < MAX_TEXT_FILE_EMBED_SIZE) {
+                        fileInfoForPrompt += `Content:\n---\n${fileData.content}\n---\n`;
+                    } else if (!fileData.type.startsWith('text/') && fileData.content?.startsWith('data:')) {
+                        fileInfoForPrompt += `(File is binary/image - content not embedded in text prompt)\n`;
+                    } else if (fileData.type.startsWith('text/')) {
+                        fileInfoForPrompt += `(Text file content too large to embed in prompt)\n`;
+                    }
+                });
+                fileInfoForPrompt += "\nUser Message:\n";
+            }
+            const fullUserContent = fileInfoForPrompt + promptText;
+            if (window.HarnessAgent?.runHarnessAgentTurn) {
+                await handleSendPromptAgent(promptText, fullUserContent);
+                return;
+            }
+            if (harnessBackendEnabled()) {
+                await handleSendPrompt1C(promptText, fullUserContent);
+                return;
+            }
+            showStatus('Агент не загружен.', 'danger');
+            resetButtonToSendState();
+            elements.chatInput.disabled = false;
+        }
+        function handleStopGeneration() {
+            if (currentAbortController) currentAbortController.abort();
+        }
+        function resetButtonToSendState() {
+            setSendButtonMode('send');
+        }
+        function paintHeaderStatus(message, type, isLoading) {
+            if (!elements.headerStatus) return;
+            elements.headerStatus.className = 'kb-status' + (type ? ` is-${type}` : '');
+            if (isLoading) {
+                elements.headerStatus.classList.add('kb-status--busy');
+                elements.headerStatus.innerHTML = `<span class="kb-status-spinner" aria-hidden="true"></span><span>${escapeHtml(message)}</span>`;
+            } else if (message) {
+                elements.headerStatus.classList.remove('kb-status--busy');
+                elements.headerStatus.textContent = message;
+            } else {
+                elements.headerStatus.classList.remove('kb-status--busy');
+                elements.headerStatus.textContent = '';
+            }
+        }
+        function showLoading(isLoading, message = "") {
+            if (isLoading) {
+                paintHeaderStatus(message || 'Обработка…', 'info', true);
+            } else if (!elements.headerStatus?.classList.contains('is-danger') && !elements.headerStatus?.classList.contains('is-warning')) {
+                paintHeaderStatus('', '', false);
+            }
+        }
+        function showStatus(message, type = "info") {
+            showLoading(false);
+            paintHeaderStatus(message, type, false);
+            if (type !== 'danger' && type !== 'warning') {
+                setTimeout(() => {
+                    if (elements.headerStatus && elements.headerStatus.textContent === message) {
+                        paintHeaderStatus('', '', false);
+                    }
+                }, 4000);
+            }
+        }
+        function createMessageElement(message) {
+            const messageWrapper = document.createElement('div');
+            const roleClass = message.role === 'user' ? 'kb-msg--user' : 'kb-msg--assistant';
+            messageWrapper.className = `kb-msg ${roleClass}`;
+            messageWrapper.dataset.messageId = message.id;
+            messageWrapper.dataset.role = message.role;
+            const label = message.role === 'user' ? 'Вы' : '1СХарнесс';
+            const bodyClass = message.role === 'model' ? 'kb-msg-body kb-msg-body--md' : 'kb-msg-body';
+            messageWrapper.innerHTML = `<div class="kb-msg-label">${label}</div><div class="${bodyClass}"></div>`;
+            const bodyElement = messageWrapper.querySelector('.kb-msg-body');
+            if (message.role === 'model' && message.content) {
+                bodyElement.innerHTML = marked.parse(message.content);
+                requestAnimationFrame(() => {
+                    addCodeActionsToBubble(bodyElement);
+                    initHarnessCharts(bodyElement);
+                });
+            } else if (message.role === 'user') {
+                bodyElement.textContent = message.content;
+            }
+            return messageWrapper;
+        }
+        function renderChatHistory() {
+            if (chatHistory.length === 0) {
+                elements.chatContainer.innerHTML = `<div class="kb-empty-state"><h2>1СХарнесс</h2><p class="kb-empty-lead">ИИ-агент на платформе 1С:Предприятие</p><p>Запросы, отчёты и инструменты выполняются через 1С. Напишите сообщение или нажмите «Новый диалог».</p></div>`;
+            } else {
+                destroyHarnessCharts(elements.chatContainer);
+                elements.chatContainer.innerHTML = '';
+                chatHistory.forEach(message => elements.chatContainer.appendChild(createMessageElement(message)));
+                scrollToBottom();
+            }
+            updateComposeContext();
+        }
+        function updateModelBubbleContent(messageId, newContent, isStreamingUpdate = false) {
+            const messageDiv = document.querySelector(`.kb-msg[data-message-id="${messageId}"][data-role="model"] .kb-msg-body`);
+            if (!messageDiv) return;
+            destroyHarnessCharts(messageDiv);
+            messageDiv.innerHTML = marked.parse(newContent || (isStreamingUpdate ? "" : "_(пустой ответ)_"));
+            addCodeActionsToBubble(messageDiv);
+            initHarnessCharts(messageDiv);
+            if (isStreamingUpdate) scrollToBottom();
+        }
+        function addCodeActionsToBubble(container) {
+            container.querySelectorAll('pre').forEach(pre => {
+                if (pre.querySelector('.code-actions')) return;
+                pre.style.position = 'relative';
+                const codeElement = pre.querySelector('code');
+                if (!codeElement) return;
+                const actionsContainer = document.createElement('div');
+                actionsContainer.className = 'code-actions';
+                actionsContainer.innerHTML = `
+                    <button class="code-action-button copy-code-button" title="Копировать код">Копировать</button>
+                    <button class="code-action-button download-code-button" title="Скачать код">Скачать</button>
+                `;
+                pre.prepend(actionsContainer);
+            });
+        }
+        function handleCopyCodeClick(button) {
+            const code = button.closest('pre')?.querySelector('code')?.textContent || '';
+            navigator.clipboard.writeText(code).then(() => {
+                button.textContent = 'Скопировано';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.textContent = 'Копировать';
+                    button.classList.remove('copied');
+                }, 2000);
+            });
+        }
+        function handleDownloadCodeClick(button) {
+            const pre = button.closest('pre');
+            const code = pre?.querySelector('code');
+            if (!code) return;
+            const langClass = Array.from(code.classList).find(c => c.startsWith('language-'));
+            const lang = langClass ? langClass.replace('language-', '') : 'txt';
+            const blob = new Blob([code.textContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `code-${lang}.${lang}`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        function escapeHtml(unsafe) {
+            return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+        function scrollToBottom() {
+            elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
+        }
+        function getSessionIndex() {
+            try {
+                const index = JSON.parse(localStorage.getItem(SESSION_INDEX_KEY));
+                return Array.isArray(index) ? index : [];
+            } catch { return []; }
+        }
+        function saveSessionIndex(index) {
+            localStorage.setItem(SESSION_INDEX_KEY, JSON.stringify(index));
+        }
+        function deriveSessionTitle() {
+            const userMsg = chatHistory.find(m => m.role === 'user');
+            if (!userMsg) return `${DEFAULT_SESSION_NAME} ${new Date().toLocaleString('ru-RU')}`;
+            let text = String(userMsg.content || '');
+            text = text.replace(/^Attached Files:[\s\S]*?User Message:\n/m, '').trim();
+            text = text.split('\n')[0].trim();
+            if (text.length > 42) text = `${text.slice(0, 41)}…`;
+            return text || `${DEFAULT_SESSION_NAME} ${new Date().toLocaleString('ru-RU')}`;
+        }
+        function persistCurrentSession() {
+            if (!chatHistory.length) return;
+            let sessions = getSessionIndex();
+            if (!currentSessionId) {
+                currentSessionId = `${Date.now()}`;
+                sessions.unshift({ id: currentSessionId, name: deriveSessionTitle(), updatedAt: Date.now() });
+            } else {
+                const session = sessions.find(s => s.id === currentSessionId);
+                if (session) {
+                    session.updatedAt = Date.now();
+                    if (session.name === DEFAULT_SESSION_NAME || session.name.startsWith(`${DEFAULT_SESSION_NAME} `)) {
+                        session.name = deriveSessionTitle();
+                    }
+                }
+            }
+            localStorage.setItem(`${SESSION_DATA_PREFIX}${currentSessionId}`, JSON.stringify(chatHistory));
+            sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            saveSessionIndex(sessions);
+            populateSessions();
+            updateComposeContext();
+            if (harnessAgentMode() && window.HarnessAgent?.persistSessionJsonViaBridge) {
+                const session = sessions.find(s => s.id === currentSessionId);
+                window.HarnessAgent.persistSessionJsonViaBridge(currentSessionId, {
+                    id: currentSessionId,
+                    name: session?.name || DEFAULT_SESSION_NAME,
+                    updatedAt: session?.updatedAt || Date.now(),
+                    messages: chatHistory
+                }).catch(() => {});
+            }
+        }
+        function populateSessions() {
+            const sessions = getSessionIndex().slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            elements.sessionsList.innerHTML = '';
+            openSessionMenuId = null;
+            if (!sessions.length) {
+                const empty = document.createElement('li');
+                empty.className = 'kb-sessions-empty';
+                empty.textContent = 'Пока нет сохранённых диалогов';
+                elements.sessionsList.appendChild(empty);
+                return;
+            }
+            sessions.forEach(session => {
+                const item = document.createElement('li');
+                item.className = `kb-sess ${session.id === currentSessionId ? 'kb-sess--active' : ''}`;
+                item.dataset.sessionId = session.id;
+                item.innerHTML = `
+                    <button type="button" class="kb-sess-btn" title="${escapeHtml(session.name)}">${escapeHtml(session.name)}</button>
+                    <div class="kb-sess-menu-wrap">
+                        <button type="button" class="kb-sess-menu-btn" aria-expanded="false" aria-label="Действия с диалогом">⋯</button>
+                        <div class="kb-sess-dropdown" hidden>
+                            <button type="button" class="kb-dropdown-item" data-session-action="rename">Переименовать</button>
+                            <button type="button" class="kb-dropdown-item text-danger" data-session-action="delete">Удалить</button>
+                        </div>
+                    </div>`;
+                elements.sessionsList.appendChild(item);
+            });
+        }
+        function startNewSession() {
+            if (currentAbortController) currentAbortController.abort();
+            chatHistory = [];
+            currentSessionId = null;
+            messageCounter = 0;
+            clearStagedFiles();
+            renderChatHistory();
+            showStatus("");
+            updateSendButtonState();
+            populateSessions();
+            updateComposeContext();
+            elements.chatInput.focus();
+        }
+        function handleLoadSession(sessionId) {
+            if (sessionId === currentSessionId) return;
+            const hasDraft = chatHistory.length > 0 && !currentSessionId;
+            if (hasDraft && !confirm('Текущий черновик не сохранён. Открыть другой чат?')) return;
+            try {
+                const historyJson = localStorage.getItem(`${SESSION_DATA_PREFIX}${sessionId}`);
+                chatHistory = JSON.parse(historyJson) || [];
+                messageCounter = chatHistory.length;
+                currentSessionId = sessionId;
+                renderChatHistory();
+                populateSessions();
+                updateContextMeter();
+                showStatus("Чат открыт.", "info");
+            } catch (e) {
+                showStatus("Не удалось открыть чат.", "danger");
+            }
+        }
+        function handleRenameSession(sessionId) {
+            const sessions = getSessionIndex();
+            const session = sessions.find(s => s.id === sessionId);
+            if (!session) return;
+            const newName = prompt('Название чата:', session.name);
+            if (!newName?.trim()) return;
+            session.name = newName.trim();
+            session.updatedAt = Date.now();
+            saveSessionIndex(sessions);
+            populateSessions();
+            showStatus('Чат переименован.', 'success');
+        }
+        function handleDeleteSession(sessionId) {
+            const sessions = getSessionIndex();
+            const session = sessions.find(s => s.id === sessionId);
+            if (!session || !confirm(`Удалить «${session.name}»? Это нельзя отменить.`)) return;
+            localStorage.removeItem(`${SESSION_DATA_PREFIX}${sessionId}`);
+            saveSessionIndex(sessions.filter(s => s.id !== sessionId));
+            if (currentSessionId === sessionId) startNewSession();
+            else populateSessions();
+            showStatus(`«${session.name}» удалён.`, 'info');
+        }
+        if (window.HarnessAgent) {
+            initialize();
+        } else {
+            document.addEventListener('harness-agent-ready', () => { initialize(); }, { once: true });
+        }
+    </script>
+</body>
+</html>
