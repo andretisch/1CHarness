@@ -35,11 +35,11 @@ export async function persistSessionJsonViaBridge(sessionId, payload) {
   if (!sessionId) return;
   const path = `sessions/${sessionId}.json`;
   const content = JSON.stringify(payload, null, 2);
-  await invoke1cTool('write_file', { path, content });
+  await invoke1cTool('fs_write', { path, content });
 }
 
 export async function loadSessionJsonViaBridge(sessionId) {
-  const out = await invoke1cTool('read_file', { path: `sessions/${sessionId}.json` });
+  const out = await invoke1cTool('fs_read', { path: `sessions/${sessionId}.json` });
   if (!out.ok) return null;
   try {
     return JSON.parse(out.result.content);

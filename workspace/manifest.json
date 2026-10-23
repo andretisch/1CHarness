@@ -1,0 +1,8 @@
+[
+  "config.json",
+  "manifest.json",
+  "agents/default.md",
+  "data/sample.txt",
+  "skills/query.md",
+  "sessions/.gitkeep"
+]

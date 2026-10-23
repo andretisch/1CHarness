@@ -56,7 +56,11 @@ export async function invoke1cTool(tool, args, options = {}) {
   postDomBridge(payload);
   const data = await dataPromise;
   if (data.type === 'tool.result') {
-    return { ok: !!data.ok, result: data.result, error: data.error };
+    let error = data.error;
+    if (!data.ok && Array.isArray(data.hints) && data.hints.length) {
+      error = `${error}\n${data.hints.join('\n')}`;
+    }
+    return { ok: !!data.ok, result: data.result, error };
   }
   return { ok: false, error: data.error || 'Неверный ответ моста' };
 }

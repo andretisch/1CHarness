@@ -52,6 +52,9 @@ export async function runAgentTurn(opts) {
   const messages = [...opts.messages];
   const signal = opts.signal;
   let steps = 0;
+  const failStreak = new Map();
+  let delegateEmpty = 0;
+  const charts = [];
 
   while (steps < cfg.maxToolSteps) {
     steps += 1;
@@ -72,28 +75,54 @@ export async function runAgentTurn(opts) {
         tool_calls: toolCalls,
       });
       for (const tc of toolCalls) {
-        opts.onToolEvent?.({ phase: 'start', name: tc.function?.name, id: tc.id });
+        const name = tc.function?.name;
+        opts.onToolEvent?.({ phase: 'start', name, id: tc.id });
+        if (name === 'delegate_task' && delegateEmpty >= 2) {
+          const blocked = { ok: false, error: 'delegate_task пропущен: два пустых запуска подряд' };
+          opts.onToolEvent?.({ phase: 'end', name, id: tc.id, ok: false });
+          messages.push({
+            role: 'tool',
+            tool_call_id: tc.id,
+            content: JSON.stringify({ error: blocked.error }),
+          });
+          continue;
+        }
         const out = await executeToolCall(tc);
-        opts.onToolEvent?.({ phase: 'end', name: tc.function?.name, id: tc.id, ok: out.ok });
+        if (out.ok && out.result?.chart) charts.push(out.result.chart);
+        if (name === 'delegate_task' && out.ok && !(out.result?.rows || []).length) {
+          delegateEmpty += 1;
+        }
+        opts.onToolEvent?.({ phase: 'end', name, id: tc.id, ok: out.ok, chart: out.result?.chart });
         messages.push({
           role: 'tool',
           tool_call_id: tc.id,
           content: JSON.stringify(out.ok ? out.result : { error: out.error }, null, 0),
         });
+        if (!out.ok) {
+          const streak = (failStreak.get(name) || 0) + 1;
+          failStreak.set(name, streak);
+          if (streak >= 3) {
+            const content = `Остановлено: инструмент ${name} трижды завершился ошибкой.\n\n${out.error || ''}`;
+            opts.onAssistantDelta?.(content);
+            return { content, messages, charts };
+          }
+        } else {
+          failStreak.set(name, 0);
+        }
       }
       continue;
     }
 
     const content = msg.content || '';
     opts.onAssistantDelta?.(content);
-    return { content, messages: [...messages, { role: 'assistant', content }] };
+    return { content, messages: [...messages, { role: 'assistant', content }], charts };
   }
 
   throw new Error('Превышен лимит шагов инструментов');
 }
 
 export async function loadSystemPromptViaBridge(agentId = 'default') {
-  const out = await invoke1cTool('read_agent_md', { agent_id: agentId });
+  const out = await invoke1cTool('fs_read', { path: `agents/${agentId}.md` });
   if (out.ok && out.result?.content) return out.result.content;
-  return 'Ты помощник 1СХарнесс. Используй инструменты для файлов.';
+  return 'Ты помощник 1СХарнесс. Используй инструменты для файлов и расчётов. Запросы к базе — только через run_query в сеансе 1С.';
 }

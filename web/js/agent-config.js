@@ -51,12 +51,12 @@ function bootstrapFromDevEnv() {
 
 async function writeConfigFile() {
   const content = JSON.stringify(cache, null, 2);
-  const out = await invoke1cTool('write_file', { path: CONFIG_PATH, content });
+  const out = await invoke1cTool('fs_write', { path: CONFIG_PATH, content });
   if (!out.ok) throw new Error(out.error || 'Не удалось записать config.json');
 }
 
 export async function loadWorkspaceConfig() {
-  const out = await invoke1cTool('read_file', { path: CONFIG_PATH });
+  const out = await invoke1cTool('fs_read', { path: CONFIG_PATH });
   if (out.ok) {
     try {
       cache = mergeConfig(JSON.parse(out.result.content));

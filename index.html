@@ -640,9 +640,10 @@
                 fill: ds.fill ?? (spec.type === 'line' ? false : true)
             }));
             return {
-                type: spec.type || 'bar',
+                type: spec.type === 'hbar' ? 'bar' : (spec.type || 'bar'),
                 data: { labels: spec.labels || [], datasets },
                 options: {
+                    indexAxis: spec.type === 'hbar' ? 'y' : 'x',
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: {
@@ -1015,7 +1016,13 @@
                     },
                 });
                 if (currentAbortController?.signal.aborted) throw new DOMException('Aborted', 'AbortError');
-                modelMessage.content = result.content || '_(пустой ответ)_';
+                let content = result.content || '_(пустой ответ)_';
+                for (const spec of result.charts || []) {
+                    const payload = JSON.stringify(spec).replace(/'/g, '&#39;');
+                    const title = spec.title ? `<figcaption>${escapeHtml(spec.title)}</figcaption>` : '';
+                    content += `\n\n<figure class="h-chart-wrap">${title}<canvas class="h-chart" data-harness-chart='${payload}'></canvas></figure>`;
+                }
+                modelMessage.content = content;
                 showStatus('Ответ получен.', 'success');
                 persistCurrentSession();
             } catch (error) {

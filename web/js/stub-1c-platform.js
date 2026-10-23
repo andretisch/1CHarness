@@ -1,13 +1,20 @@
-/** Эмуляция платформы 1С в браузере (тот же контракт, что tools/python/stub_1c). */
+/** Эмуляция платформы 1С в браузере: инструменты ТЗ через тот же контракт, что tools/python/stub_1c. */
+
+import { executeHarnessTool, toolErrorPayload } from './tools-runtime.js';
 
 const VFS_PREFIX = 'harness:vfs:';
 const WORKSPACE_URL_PREFIX = '/workspace/';
 const DEV_PROXY_BASE_RE = /\/dev-llm\/|127\.0\.0\.1:\d+\/dev-llm/i;
 
-function normalizePath(rel) {
-  let p = String(rel || '').trim().replace(/\\/g, '/').replace(/^\/+/, '');
-  if (!p || p.split('/').includes('..')) throw new Error('Недопустимый путь');
-  return p;
+let manifestCache = null;
+
+function vfsKeys() {
+  const paths = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(VFS_PREFIX)) paths.push(key.slice(VFS_PREFIX.length));
+  }
+  return paths;
 }
 
 function vfsGet(path) {
@@ -31,49 +38,86 @@ function configJsonUsesDevProxy(content) {
   }
 }
 
-export async function stub1cExecuteTool(name, args) {
-  args = args || {};
+async function loadManifest() {
+  if (manifestCache) return manifestCache;
   try {
-    if (name === 'read_file') {
-      const path = normalizePath(args.path);
-      const overlay = vfsGet(path);
-      if (path === 'config.json') {
-        const res = await fetch(WORKSPACE_URL_PREFIX + path);
-        const disk = res.ok ? await res.text() : null;
-        if (overlay !== null && configJsonUsesDevProxy(overlay)) {
-          vfsRemove(path);
-          if (disk) return { ok: true, result: { path, content: disk } };
-        }
-        if (overlay !== null) return { ok: true, result: { path, content: overlay } };
-        if (disk) return { ok: true, result: { path, content: disk } };
-        throw new Error(`Файл не найден: ${path}`);
+    const res = await fetch(`${WORKSPACE_URL_PREFIX}manifest.json`);
+    if (!res.ok) {
+      manifestCache = [];
+      return manifestCache;
+    }
+    const data = await res.json();
+    manifestCache = Array.isArray(data) ? data : [];
+  } catch {
+    manifestCache = [];
+  }
+  return manifestCache;
+}
+
+async function readDisk(path) {
+  const res = await fetch(WORKSPACE_URL_PREFIX + path);
+  if (!res.ok) throw new Error(`Файл не найден: ${path}`);
+  return res.text();
+}
+
+const fs = {
+  async read(path) {
+    const overlay = vfsGet(path);
+    if (path === 'config.json' && overlay !== null && configJsonUsesDevProxy(overlay)) {
+      vfsRemove(path);
+    } else if (overlay !== null) {
+      return overlay;
+    }
+    return readDisk(path);
+  },
+  async write(path, content) {
+    vfsSet(path, content ?? '');
+  },
+  async list() {
+    const disk = await loadManifest();
+    return [...new Set([...disk, ...vfsKeys()])].filter((p) => p && !p.endsWith('/.keep') ? true : true);
+  },
+  async searchChats(query) {
+    const q = query.toLowerCase();
+    const hits = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith('llamaChatSession_')) continue;
+      const raw = localStorage.getItem(key) || '';
+      if (!raw.toLowerCase().includes(q)) continue;
+      const at = raw.toLowerCase().indexOf(q);
+      hits.push({
+        session_id: key.slice('llamaChatSession_'.length),
+        excerpt: raw.slice(Math.max(0, at - 40), at + query.length + 80).replace(/\s+/g, ' '),
+      });
+    }
+    return hits;
+  },
+  async readSkills() {
+    const paths = (await this.list()).filter((p) => p.startsWith('skills/') || p.startsWith('agents/'));
+    const docs = [];
+    for (const path of paths) {
+      if (!path.endsWith('.md')) continue;
+      try {
+        docs.push({ path, content: await this.read(path) });
+      } catch {
+        /* skip missing */
       }
-      if (overlay !== null) return { ok: true, result: { path, content: overlay } };
-      const res = await fetch(WORKSPACE_URL_PREFIX + path);
-      if (!res.ok) throw new Error(`Файл не найден: ${path}`);
-      const content = await res.text();
-      return { ok: true, result: { path, content } };
     }
-    if (name === 'write_file') {
-      const path = normalizePath(args.path);
-      const content = args.content ?? '';
-      vfsSet(path, content);
-      return { ok: true, result: { path, bytes: content.length, ok: true } };
-    }
-    if (name === 'read_agent_md') {
-      const agentId = String(args.agent_id || 'default').trim();
-      if (!/^[a-zA-Z0-9_-]+$/.test(agentId)) throw new Error('Недопустимый agent_id');
-      const inner = await stub1cExecuteTool('read_file', { path: `agents/${agentId}.md` });
-      if (!inner.ok) return inner;
-      return { ok: true, result: { ...inner.result, agent_id: agentId } };
-    }
-    throw new Error(`Неизвестный инструмент: ${name}`);
+    return docs;
+  },
+};
+
+export async function stub1cExecuteTool(name, args) {
+  try {
+    const result = await executeHarnessTool(name, args, fs);
+    return { ok: true, result };
   } catch (e) {
-    return { ok: false, error: e.message || String(e) };
+    const payload = toolErrorPayload(e);
+    return { ok: false, error: payload.message, hints: payload.hints };
   }
 }
 
-/** Слушает мост; в dev имитирует ответ платформы 1С. */
 export function installStub1CPlatformOnBridge(isReal1C) {
   document.addEventListener('harness-1c-request', async (ev) => {
     if (isReal1C()) return;
@@ -86,6 +130,7 @@ export function installStub1CPlatformOnBridge(isReal1C) {
       ok: out.ok,
       result: out.result,
       error: out.error,
+      hints: out.hints,
     };
     queueMicrotask(() => {
       document.dispatchEvent(new CustomEvent('harness-1c-response', { detail: response }));
