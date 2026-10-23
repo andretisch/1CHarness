@@ -9,194 +9,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700&display=swap" rel="stylesheet">
     <link href="vendor/bootstrap/5.3.3/bootstrap.min.css" rel="stylesheet">
-    <link href="vendor/theme/krabobot.css" rel="stylesheet">
+    <link href="vendor/theme/krabobot-chat.css" rel="stylesheet">
+    <link href="vendor/theme/krabobot.css" rel="stylesheet" id="palette-bootstrap">
+    <link href="vendor/theme/harness-layout.css" rel="stylesheet">
     <script src="vendor/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="vendor/highlight.js/11.9.0/styles/1c-taxi-light.css" id="highlight-theme">
+    <link rel="stylesheet" href="vendor/highlight.js/11.9.0/styles/krabobot-light.css" id="highlight-theme">
     <script src="vendor/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
-        html, body {
-            height: 100vh;
-            overflow: hidden; 
-        }
-        .app-container {
-            height: 100vh;
-        }
-        .main-content {
-            height: 100vh; 
-            overflow: hidden; 
-        }
-        .chat-container {
-            flex-grow: 1; 
-            overflow-y: auto; 
-            min-height: 0; 
-        }
-        .chat-input-container {
-            flex-shrink: 0; 
-        }
-        .user-message .message-body {
-            background-color: var(--bs-primary-bg-subtle);
-            border-color: var(--bs-primary-border-subtle);
-        }
-        .message-body pre {
-            position: relative;
-            padding-top: 40px;
-        }
-        .code-actions {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            display: flex;
-            gap: 8px;
-        }
-        .code-action-button {
-            padding: 4px 8px;
-            font-size: 12px;
-            background-color: var(--bs-secondary-bg);
-            border: 1px solid var(--bs-border-color);
-            border-radius: 4px;
-            cursor: pointer;
-            opacity: 0.8;
-            transition: all 0.2s ease;
-        }
-        .code-action-button:hover {
-            opacity: 1;
-            background-color: var(--bs-tertiary-bg);
-        }
-        .code-action-button.copied {
-            background-color: var(--bs-success);
-            color: white;
-        }
-        .compose-wrap {
-            width: 100%;
-            max-width: 760px;
-            margin: 0 auto;
-        }
-        /* Строка ввода — отдельно от палитры крабобот (как в Cursor-капсуле) */
-        .compose-shell {
-            display: flex;
-            align-items: flex-end;
-            gap: 8px;
-            padding: 10px 12px;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 22px;
-            background: #ffffff;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-        }
-        .compose-icon-btn {
-            width: 32px;
-            height: 32px;
-            flex: 0 0 32px;
-            border: 0;
-            border-radius: 999px;
-            background: transparent;
-            color: var(--bs-body-color);
-            font-size: 1.35rem;
-            line-height: 1;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            margin-bottom: 2px;
-        }
-        .compose-icon-btn:hover {
-            background: rgba(0, 0, 0, 0.06);
-        }
-        .compose-input {
-            flex: 1;
-            resize: none;
-            border: 0;
-            background: transparent;
-            box-shadow: none;
-            outline: none;
-            min-height: 28px;
-            max-height: 160px;
-            padding: 4px 0 6px;
-            font-size: 15px;
-            line-height: 1.45;
-        }
-        .compose-input:focus {
-            box-shadow: none;
-        }
-        .compose-actions {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex-shrink: 0;
-            margin-bottom: 2px;
-        }
-        .compose-send {
-            width: 34px;
-            height: 34px;
-            border: 0;
-            border-radius: 999px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #2f2f2f;
-            color: #fff;
-            flex-shrink: 0;
-        }
-        .compose-send:hover:not(:disabled) {
-            background: #111;
-        }
-        .compose-send:disabled {
-            opacity: 0.35;
-            cursor: default;
-        }
-        .compose-send.is-stop {
-            background: var(--bs-danger);
-        }
-        .compose-stop {
-            width: 10px;
-            height: 10px;
-            background: #fff;
-            border-radius: 2px;
-            display: block;
-        }
-        .compose-files {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-bottom: 8px;
-        }
-        .compose-files:empty {
-            display: none;
-        }
-        .compose-footer {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 8px 12px 0;
-            min-height: 20px;
-            font-size: 12px;
-            color: var(--bs-secondary-color);
-        }
-        .compose-context {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .compose-footer-end {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-            max-width: 55%;
-        }
-        .compose-status {
-            text-align: right;
-            flex: 1;
-            min-width: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .context-meter {
-            flex-shrink: 0;
-            line-height: 0;
-            cursor: help;
-        }
+        html, body { height: 100%; overflow: hidden; margin: 0; }
         .context-ring {
             display: block;
             transform: rotate(-90deg);
@@ -236,109 +56,92 @@
         [data-bs-theme="dark"] .compose-icon-btn:hover {
             background: rgba(255, 255, 255, 0.08);
         }
-        #sidebar {
-            transition: transform .3s ease-in-out, width .3s ease-in-out;
-        }
-        #sessionsList {
-            overflow-y: auto;
-            min-height: 0;
-        }
-        .session-row .session-open {
-            text-decoration: none;
-            color: inherit;
-            border: 0;
-            border-radius: 0;
-        }
-        .session-row .session-open:hover,
-        .session-row .session-open:focus {
-            background: rgba(0, 0, 0, 0.04);
-        }
-        .session-menu {
-            text-decoration: none;
-            line-height: 1;
-            font-size: 1.25rem;
-            letter-spacing: -0.05em;
-            opacity: 0.55;
-        }
-        .session-menu:hover,
-        .session-menu.show {
-            opacity: 1;
-        }
-        .list-group-item.active .session-menu {
-            opacity: 0.85;
-        }
-        .dropdown-menu .dropdown-item.text-danger {
-            color: var(--bs-danger) !important;
-        }
     </style>
 </head>
 <body>
     <div id="harness-1c-bridge" hidden aria-hidden="true"></div>
-    <div class="app-container d-flex">
-        <button class="btn btn-light d-md-none m-2 position-fixed" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" style="z-index: 1045; top: 0; left: 0;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
-                <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/>
-            </svg>
-        </button>
-        <aside class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary offcanvas-md offcanvas-start" tabindex="-1" id="sidebar" style="width: 280px;">
-            <div class="offcanvas-header">
-                <h5 class="offcanvas-title">1СХарнесс</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Закрыть"></button>
-            </div>
-            <div class="d-grid gap-2 mb-2" id="sidebar-header">
-                <button class="btn btn-primary" type="button" id="newChatBtn">Новый чат</button>
-            </div>
-            <div class="small text-body-secondary px-1 mb-2">Недавние</div>
-            <div class="list-group list-group-flush border-bottom flex-grow-1 mb-2" id="sessionsList"></div>
-            <div class="mt-auto pt-2 d-grid gap-2">
-                <button class="btn btn-outline-secondary" type="button" id="settingsBtn" data-bs-toggle="modal" data-bs-target="#settingsModal">Настройки</button>
-                <button class="btn btn-outline-secondary" type="button" id="themeSwitcher" title="Сменить тему">🌙</button>
-            </div>
-        </aside>
-        <main class="main-content flex-grow-1 d-flex flex-column">
-            <div class="chat-panel-stage">
-                <div class="chat-backdrop" aria-hidden="true"></div>
-                <div class="chat-container p-3" id="chatContainer">
-                    <div class="empty-state text-center h-100 d-flex flex-column justify-content-center align-items-center px-3">
-                        <div style="max-width: 32rem;">
-                            <h2 class="mb-2">1СХарнесс</h2>
-                            <p class="lead mb-2">ИИ-агент на платформе 1С:Предприятие</p>
-                            <p class="text-body-secondary mb-0">Запросы, отчёты и инструменты выполняются через 1С. Напишите сообщение или нажмите «Новый чат».</p>
-                        </div>
+    <div id="harness-layout" class="kb-layout">
+        <header class="kb-top">
+            <div class="kb-top-inner">
+                <div class="kb-menu-wrap">
+                    <button type="button" id="headerMenuBtn" class="kb-menu-btn" aria-expanded="false" aria-haspopup="true" aria-controls="headerMenuDropdown" aria-label="Меню">
+                        <span class="kb-menu-burger" aria-hidden="true"></span>
+                    </button>
+                    <div id="headerMenuDropdown" class="kb-dropdown" role="menu" aria-label="Разделы" hidden>
+                        <button type="button" class="kb-dropdown-item kb-dropdown-item--active" role="menuitem" data-nav="chat">Чат</button>
+                        <button type="button" class="kb-dropdown-item" role="menuitem" id="headerSettingsBtn">Настройки</button>
                     </div>
                 </div>
+                <div class="kb-brand">
+                    <h1 class="kb-sr">1СХарнесс</h1>
+                    <span class="kb-brand-word" aria-hidden="true"><span class="kb-brand-cr">1С</span><span class="kb-brand-domain">Харнесс</span></span>
+                </div>
+                <div class="kb-toolbar">
+                    <span id="headerStatus" class="kb-status" aria-live="polite"></span>
+                </div>
             </div>
-            <div class="chat-input-container px-3 pb-3 pt-2">
-                <div class="compose-wrap">
-                    <div id="stagedFilesArea" class="compose-files"></div>
-                    <div class="compose-shell">
-                        <label for="fileInput" class="compose-icon-btn mb-0" title="Прикрепить файлы" aria-label="Прикрепить файлы">+</label>
-                        <input type="file" id="fileInput" multiple class="d-none">
-                        <textarea class="compose-input" id="chatInput" placeholder="Добавьте сообщение…" rows="1"></textarea>
-                        <div class="compose-actions">
-                            <button type="button" class="compose-send" id="sendButton" title="Отправить" aria-label="Отправить">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+        </header>
+        <div class="kb-body">
+            <div class="kb-sidebar-wrap" id="kbSidebarWrap">
+                <aside class="kb-sidebar" aria-label="Диалоги" id="kbSidebar">
+                    <div class="kb-sidebar-head">
+                        <div class="kb-sidebar-head-row">
+                            <h2 class="kb-sidebar-title">Диалоги</h2>
+                            <button type="button" id="sidebarToggle" class="kb-sidebar-toggle kb-btn kb-btn-secondary kb-btn-icon" aria-expanded="true" aria-controls="kbSidebar" aria-label="Свернуть список диалогов" title="Свернуть список диалогов">
+                                <span class="kb-sidebar-toggle-chevron" aria-hidden="true">‹</span>
                             </button>
                         </div>
+                        <button type="button" id="newChatBtn" class="kb-btn kb-btn-secondary kb-btn-block">Новый диалог</button>
+                        <button type="button" id="refreshSessionsBtn" class="kb-btn kb-btn-secondary kb-btn-block">Обновить список</button>
                     </div>
-                    <div class="compose-footer">
-                        <span class="compose-context" id="composeContext">1СХарнесс</span>
-                        <div class="compose-footer-end">
-                            <span class="compose-status" id="statusBar"></span>
-                            <span class="context-meter" id="contextMeter" tabindex="0"
-                                data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
-                                title="Заполнение контекстного окна">
-                                <svg class="context-ring" width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-                                    <circle class="context-ring-bg" cx="11" cy="11" r="9"></circle>
-                                    <circle class="context-ring-fill" id="contextRingFill" cx="11" cy="11" r="9"
-                                        stroke-dasharray="56.55" stroke-dashoffset="56.55"></circle>
-                                </svg>
-                            </span>
-                        </div>
+                    <ul id="sessionsList" class="kb-session-list" role="list"></ul>
+                    <div class="kb-sidebar-foot">
+                        <button type="button" id="settingsBtn" class="kb-btn kb-btn-secondary kb-btn-block" data-bs-toggle="modal" data-bs-target="#settingsModal">Настройки</button>
+                    </div>
+                </aside>
+            </div>
+            <button type="button" id="sidebarExpand" class="kb-sidebar-expand kb-btn kb-btn-secondary" aria-controls="kbSidebar" aria-label="Развернуть список диалогов" title="Развернуть список диалогов" hidden>
+                <span class="kb-sidebar-toggle-chevron" aria-hidden="true">›</span>
+                <span>Диалоги</span>
+            </button>
+            <div class="kb-panel">
+                <div class="kb-panel-stage">
+                    <div class="kb-chat-backdrop" aria-hidden="true"></div>
+                    <div id="kb-view-chat" class="kb-view kb-view-chat" role="region" aria-label="Чат">
+                        <main class="kb-main">
+                            <div class="kb-log-wrap">
+                                <div id="chatContainer" class="kb-log" role="log" aria-label="Переписка"></div>
+                            </div>
+                            <form id="chatForm" class="harness-compose-form" onsubmit="return false;">
+                                <input type="file" id="fileInput" class="kb-file-input" multiple>
+                                <div class="harness-compose-wrap">
+                                    <div id="stagedFilesArea" class="compose-files"></div>
+                                    <div class="compose-shell">
+                                        <label for="fileInput" class="compose-icon-btn mb-0" title="Прикрепить файлы" aria-label="Прикрепить файлы">+</label>
+                                        <textarea class="compose-input" id="chatInput" placeholder="Добавьте сообщение…" rows="1"></textarea>
+                                        <button type="button" class="compose-send" id="sendButton" title="Отправить" aria-label="Отправить">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+                                        </button>
+                                    </div>
+                                    <div class="compose-footer">
+                                        <span class="compose-context" id="composeContext">1СХарнесс</span>
+                                        <div class="compose-footer-end">
+                                            <span class="compose-status" id="statusBar" aria-hidden="true"></span>
+                                            <span class="context-meter" id="contextMeter" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Заполнение контекстного окна">
+                                                <svg class="context-ring" width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+                                                    <circle class="context-ring-bg" cx="11" cy="11" r="9"></circle>
+                                                    <circle class="context-ring-fill" id="contextRingFill" cx="11" cy="11" r="9" stroke-dasharray="56.55" stroke-dashoffset="56.55"></circle>
+                                                </svg>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </main>
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
     </div>
     <div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -357,6 +160,9 @@
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="tab-generation-btn" data-bs-toggle="tab" data-bs-target="#tab-generation" type="button" role="tab">Генерация</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-interface-btn" data-bs-toggle="tab" data-bs-target="#tab-interface" type="button" role="tab">Интерфейс</button>
                         </li>
                     </ul>
                     <div class="tab-content pt-3">
@@ -386,6 +192,27 @@
                             <div class="mb-3"><label for="topK" class="form-label">Top K</label><input type="number" class="form-control" id="topK" min="1" step="1" value="40"></div>
                             <div class="mb-0"><label for="stopSequences" class="form-label">Стоп-последовательности</label><input type="text" class="form-control" id="stopSequences" value="USER:, \nUSER:, <|user|>"><div class="form-text">Через запятую.</div></div>
                         </div>
+                        <div class="tab-pane fade" id="tab-interface" role="tabpanel">
+                            <div class="mb-3">
+                                <label for="paletteSelect" class="form-label">Цветовая палитра</label>
+                                <select class="form-select" id="paletteSelect">
+                                    <option value="krabobot">Крабобот (синий)</option>
+                                    <option value="taxi">1С Такси (шахматка)</option>
+                                </select>
+                                <div class="form-text">Оформление чата и боковой панели. Поле ввода остаётся в виде капсулы.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="brightnessSelect" class="form-label">Яркость</label>
+                                <select class="form-select" id="brightnessSelect">
+                                    <option value="light">Светлая</option>
+                                    <option value="dark">Тёмная</option>
+                                </select>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="sidebarCollapsedPref">
+                                <label class="form-check-label" for="sidebarCollapsedPref">Сворачивать список диалогов при открытии</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -407,8 +234,19 @@
             chatInput: document.getElementById('chatInput'),
             sendButton: document.getElementById('sendButton'),
             statusBar: document.getElementById('statusBar'),
+            headerStatus: document.getElementById('headerStatus'),
             chatContainer: document.getElementById('chatContainer'),
-            themeSwitcher: document.getElementById('themeSwitcher'),
+            harnessLayout: document.getElementById('harness-layout'),
+            paletteBootstrap: document.getElementById('palette-bootstrap'),
+            paletteSelect: document.getElementById('paletteSelect'),
+            brightnessSelect: document.getElementById('brightnessSelect'),
+            sidebarCollapsedPref: document.getElementById('sidebarCollapsedPref'),
+            sidebarToggle: document.getElementById('sidebarToggle'),
+            sidebarExpand: document.getElementById('sidebarExpand'),
+            refreshSessionsBtn: document.getElementById('refreshSessionsBtn'),
+            headerMenuBtn: document.getElementById('headerMenuBtn'),
+            headerMenuDropdown: document.getElementById('headerMenuDropdown'),
+            headerSettingsBtn: document.getElementById('headerSettingsBtn'),
             temperature: document.getElementById('temperature'),
             nPredict: document.getElementById('nPredict'),
             contextWindow: document.getElementById('contextWindow'),
@@ -425,7 +263,6 @@
             modelsList: document.getElementById('modelsList'),
             modelsNote: document.getElementById('modelsNote'),
             refreshModelsBtn: document.getElementById('refreshModelsBtn'),
-            sidebar: document.getElementById('sidebar'),
             highlightTheme: document.getElementById('highlight-theme'),
             composeContext: document.getElementById('composeContext'),
             contextMeter: document.getElementById('contextMeter'),
@@ -441,8 +278,8 @@
         let currentSessionId = null;
         let currentAbortController = null;
         let stagedFiles = [];
-        let sidebarInstance = null;
         let harnessHostResponseResolver = null;
+        let openSessionMenuId = null;
         function harnessBackendEnabled() {
             const params = new URLSearchParams(window.location.search);
             return params.get('backend') === '1c' || window.__1CHarnessBackend === true;
@@ -484,29 +321,65 @@
             const line = String(userText || '').split('\n').find(l => l.trim()) || '(пусто)';
             return `**1СХарнесс (v0.2)**\n\nЗапрос принят на стороне 1С. Модуль ответа пока заглушка — подключите \`ОбработатьСообщение\` в модуле формы обработки.\n\n> ${line.trim().slice(0, 200)}`;
         }
-        function initializeTheme() {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            setTheme(savedTheme);
+        function getHighlightUrls(palette) {
+            if (palette === 'taxi') {
+                return {
+                    light: 'vendor/highlight.js/11.9.0/styles/1c-taxi-light.css',
+                    dark: 'vendor/highlight.js/11.9.0/styles/1c-taxi-dark.css'
+                };
+            }
+            return {
+                light: 'vendor/highlight.js/11.9.0/styles/krabobot-light.css',
+                dark: 'vendor/highlight.js/11.9.0/styles/krabobot-dark.css'
+            };
+        }
+        function setPalette(palette) {
+            const p = palette === 'taxi' ? 'taxi' : 'krabobot';
+            document.documentElement.setAttribute('data-palette', p);
+            if (elements.paletteBootstrap) {
+                elements.paletteBootstrap.href = p === 'taxi'
+                    ? 'vendor/theme/1c-taxi.css'
+                    : 'vendor/theme/krabobot.css';
+            }
+            localStorage.setItem('harnessPalette', p);
+            if (elements.paletteSelect) elements.paletteSelect.value = p;
+            const theme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+            const urls = getHighlightUrls(p);
+            elements.highlightTheme.href = theme === 'dark' ? urls.dark : urls.light;
         }
         function setTheme(theme) {
-            document.documentElement.setAttribute('data-bs-theme', theme);
-            elements.themeSwitcher.textContent = theme === 'dark' ? '☀️' : '🌙';
-            const lightThemeUrl = 'vendor/highlight.js/11.9.0/styles/krabobot-light.css';
-            const darkThemeUrl = 'vendor/highlight.js/11.9.0/styles/krabobot-dark.css';
-            elements.highlightTheme.href = theme === 'dark' ? darkThemeUrl : lightThemeUrl;
-            localStorage.setItem('theme', theme);
+            const t = theme === 'dark' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-bs-theme', t);
+            localStorage.setItem('theme', t);
+            if (elements.brightnessSelect) elements.brightnessSelect.value = t;
+            const palette = document.documentElement.getAttribute('data-palette') || 'krabobot';
+            const urls = getHighlightUrls(palette);
+            elements.highlightTheme.href = t === 'dark' ? urls.dark : urls.light;
         }
-        function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            setTheme(newTheme);
+        function setSidebarCollapsed(collapsed) {
+            if (!elements.harnessLayout) return;
+            elements.harnessLayout.classList.toggle('kb-layout--sidebar-collapsed', collapsed);
+            if (elements.sidebarToggle) {
+                elements.sidebarToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            }
+            if (elements.sidebarExpand) {
+                elements.sidebarExpand.hidden = !collapsed;
+            }
+        }
+        function initializeAppearance() {
+            const palette = localStorage.getItem('harnessPalette') || 'krabobot';
+            setPalette(palette);
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            setTheme(savedTheme);
+            const collapsed = localStorage.getItem('harnessSidebarCollapsed') === 'true';
+            if (elements.sidebarCollapsedPref) elements.sidebarCollapsedPref.checked = collapsed;
+            setSidebarCollapsed(collapsed);
         }
         function initialize() {
-            sidebarInstance = new bootstrap.Offcanvas(elements.sidebar);
             loadServerUrl();
             loadGenerationSettings();
             setupEventListeners();
-            initializeTheme();
+            initializeAppearance();
             configureMarked();
             initContextMeterTooltip();
             if (harnessBackendEnabled()) {
@@ -716,11 +589,47 @@
                 if (currentAbortController) handleStopGeneration();
                 else handleSendPrompt();
             });
-            elements.newChatBtn.addEventListener('click', () => {
-                startNewSession();
-                closeMobileSidebar();
-            });
-            elements.themeSwitcher.addEventListener('click', toggleTheme);
+            elements.newChatBtn.addEventListener('click', () => startNewSession());
+            if (elements.refreshSessionsBtn) {
+                elements.refreshSessionsBtn.addEventListener('click', () => {
+                    populateSessions();
+                    showStatus('Список диалогов обновлён.', 'info');
+                });
+            }
+            if (elements.paletteSelect) {
+                elements.paletteSelect.addEventListener('change', () => setPalette(elements.paletteSelect.value));
+            }
+            if (elements.brightnessSelect) {
+                elements.brightnessSelect.addEventListener('change', () => setTheme(elements.brightnessSelect.value));
+            }
+            if (elements.sidebarCollapsedPref) {
+                elements.sidebarCollapsedPref.addEventListener('change', () => {
+                    localStorage.setItem('harnessSidebarCollapsed', elements.sidebarCollapsedPref.checked ? 'true' : 'false');
+                    setSidebarCollapsed(elements.sidebarCollapsedPref.checked);
+                });
+            }
+            if (elements.sidebarToggle) {
+                elements.sidebarToggle.addEventListener('click', () => {
+                    const collapsed = !elements.harnessLayout.classList.contains('kb-layout--sidebar-collapsed');
+                    setSidebarCollapsed(collapsed);
+                    localStorage.setItem('harnessSidebarCollapsed', collapsed ? 'true' : 'false');
+                    if (elements.sidebarCollapsedPref) elements.sidebarCollapsedPref.checked = collapsed;
+                });
+            }
+            if (elements.sidebarExpand) {
+                elements.sidebarExpand.addEventListener('click', () => {
+                    setSidebarCollapsed(false);
+                    localStorage.setItem('harnessSidebarCollapsed', 'false');
+                    if (elements.sidebarCollapsedPref) elements.sidebarCollapsedPref.checked = false;
+                });
+            }
+            setupHeaderMenu();
+            if (elements.headerSettingsBtn) {
+                elements.headerSettingsBtn.addEventListener('click', () => {
+                    closeHeaderMenu();
+                    bootstrap.Modal.getOrCreateInstance(elements.settingsModal).show();
+                });
+            }
             elements.rememberServerUrl.addEventListener('change', handleRememberUrlChange);
             if (elements.contextWindow) {
                 elements.contextWindow.addEventListener('change', () => {
@@ -751,7 +660,11 @@
             });
             elements.modelsList.addEventListener('click', handleModelAction);
             elements.refreshModelsBtn.addEventListener('click', refreshModels);
-            elements.settingsModal.addEventListener('shown.bs.modal', refreshModels);
+            elements.settingsModal.addEventListener('shown.bs.modal', () => {
+                refreshModels();
+                if (elements.paletteSelect) elements.paletteSelect.value = document.documentElement.getAttribute('data-palette') || 'krabobot';
+                if (elements.brightnessSelect) elements.brightnessSelect.value = document.documentElement.getAttribute('data-bs-theme') || 'light';
+            });
             elements.settingsModal.addEventListener('hidden.bs.modal', () => clearTimeout(modelsPollTimer));
             elements.sessionsList.addEventListener('click', function(event) {
                 const actionBtn = event.target.closest('[data-session-action]');
@@ -767,20 +680,51 @@
                     else if (action === 'delete') handleDeleteSession(sessionId);
                     return;
                 }
-                const openBtn = event.target.closest('.session-open');
+                const menuBtn = event.target.closest('.kb-sess-menu-btn');
+                if (menuBtn) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const row = menuBtn.closest('[data-session-id]');
+                    if (!row) return;
+                    const dropdown = row.querySelector('.kb-sess-dropdown');
+                    if (!dropdown) return;
+                    const sid = row.dataset.sessionId;
+                    if (openSessionMenuId && openSessionMenuId !== sid) {
+                        const prev = elements.sessionsList.querySelector(`[data-session-id="${openSessionMenuId}"] .kb-sess-dropdown`);
+                        if (prev) prev.hidden = true;
+                    }
+                    dropdown.hidden = !dropdown.hidden;
+                    menuBtn.setAttribute('aria-expanded', dropdown.hidden ? 'false' : 'true');
+                    openSessionMenuId = dropdown.hidden ? null : sid;
+                    return;
+                }
+                const openBtn = event.target.closest('.kb-sess-btn');
                 if (openBtn) {
                     const row = openBtn.closest('[data-session-id]');
-                    if (row) {
-                        handleLoadSession(row.dataset.sessionId);
-                        closeMobileSidebar();
-                    }
+                    if (row) handleLoadSession(row.dataset.sessionId);
+                }
+            });
+            document.addEventListener('click', (event) => {
+                if (!event.target.closest('.kb-sess-menu-wrap')) {
+                    elements.sessionsList.querySelectorAll('.kb-sess-dropdown').forEach(el => { el.hidden = true; });
+                    openSessionMenuId = null;
                 }
             });
         }
-        function closeMobileSidebar() {
-            if (window.innerWidth < 768) {
-                sidebarInstance.hide();
-            }
+        function setupHeaderMenu() {
+            if (!elements.headerMenuBtn || !elements.headerMenuDropdown) return;
+            elements.headerMenuBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const open = elements.headerMenuDropdown.hidden;
+                elements.headerMenuDropdown.hidden = !open;
+                elements.headerMenuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+            document.addEventListener('click', () => closeHeaderMenu());
+        }
+        function closeHeaderMenu() {
+            if (!elements.headerMenuDropdown) return;
+            elements.headerMenuDropdown.hidden = true;
+            if (elements.headerMenuBtn) elements.headerMenuBtn.setAttribute('aria-expanded', 'false');
         }
         function autoResizeTextarea(textarea) {
             textarea.style.height = 'auto';
@@ -826,7 +770,8 @@
                 return;
             }
             const urlValid = harnessBackendEnabled() || isValidHttpUrl(elements.serverUrl.value.trim());
-            const isLoading = elements.statusBar.querySelector('.spinner-border') !== null;
+            const isLoading = (elements.headerStatus && elements.headerStatus.querySelector('.kb-status-spinner')) ||
+                (elements.statusBar && elements.statusBar.querySelector('.spinner-border') !== null);
             const canSend = urlValid && !isLoading && (elements.chatInput.value.trim().length > 0 || stagedFiles.length > 0);
             elements.sendButton.disabled = !canSend;
         }
@@ -1157,47 +1102,59 @@
                 return '';
             }).join('\n') + '\nASSISTANT:';
         }
-        function showLoading(isLoading, message = "") {
+        function paintHeaderStatus(message, type, isLoading) {
+            if (!elements.headerStatus) return;
+            elements.headerStatus.className = 'kb-status' + (type ? ` is-${type}` : '');
             if (isLoading) {
-                elements.statusBar.className = 'compose-status is-info';
-                elements.statusBar.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span>${escapeHtml(message)}`;
-            } else if (!elements.statusBar.classList.contains('is-danger') && !elements.statusBar.classList.contains('is-warning')) {
-                elements.statusBar.className = 'compose-status';
-                elements.statusBar.textContent = '';
+                elements.headerStatus.classList.add('kb-status--busy');
+                elements.headerStatus.innerHTML = `<span class="kb-status-spinner" aria-hidden="true"></span><span>${escapeHtml(message)}</span>`;
+            } else if (message) {
+                elements.headerStatus.classList.remove('kb-status--busy');
+                elements.headerStatus.textContent = message;
+            } else {
+                elements.headerStatus.classList.remove('kb-status--busy');
+                elements.headerStatus.textContent = '';
             }
         }
-        function showStatus(message, type = "info") { 
+        function showLoading(isLoading, message = "") {
+            if (isLoading) {
+                paintHeaderStatus(message || 'Обработка…', 'info', true);
+            } else if (!elements.headerStatus?.classList.contains('is-danger') && !elements.headerStatus?.classList.contains('is-warning')) {
+                paintHeaderStatus('', '', false);
+            }
+        }
+        function showStatus(message, type = "info") {
             showLoading(false);
-            elements.statusBar.className = `compose-status is-${type}`;
-            elements.statusBar.textContent = message;
+            paintHeaderStatus(message, type, false);
             if (type !== 'danger' && type !== 'warning') {
                 setTimeout(() => {
-                    if (elements.statusBar.textContent === message) {
-                       elements.statusBar.textContent = '';
-                       elements.statusBar.className = 'compose-status';
+                    if (elements.headerStatus && elements.headerStatus.textContent === message) {
+                        paintHeaderStatus('', '', false);
                     }
                 }, 4000);
             }
         }
         function createMessageElement(message) {
             const messageWrapper = document.createElement('div');
-            messageWrapper.className = `chat-message ${message.role}-message d-flex gap-3 mb-3`;
+            const roleClass = message.role === 'user' ? 'kb-msg--user' : 'kb-msg--assistant';
+            messageWrapper.className = `kb-msg ${roleClass}`;
             messageWrapper.dataset.messageId = message.id;
-            const avatar = `<div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">${message.role === 'user' ? 'Вы' : '1С'}</div>`;
-            const bodyDiv = `<div class="message-body p-3 border rounded-3 w-100">${message.content || ''}</div>`;
-            messageWrapper.innerHTML = avatar + bodyDiv;
-            const bodyElement = messageWrapper.querySelector('.message-body');
+            messageWrapper.dataset.role = message.role;
+            const label = message.role === 'user' ? 'Вы' : '1СХарнесс';
+            const bodyClass = message.role === 'model' ? 'kb-msg-body kb-msg-body--md' : 'kb-msg-body';
+            messageWrapper.innerHTML = `<div class="kb-msg-label">${label}</div><div class="${bodyClass}"></div>`;
+            const bodyElement = messageWrapper.querySelector('.kb-msg-body');
             if (message.role === 'model' && message.content) {
                 bodyElement.innerHTML = marked.parse(message.content);
                 requestAnimationFrame(() => addCodeActionsToBubble(bodyElement));
-            } else if(message.role === 'user') {
+            } else if (message.role === 'user') {
                 bodyElement.textContent = message.content;
             }
             return messageWrapper;
         }
         function renderChatHistory() {
             if (chatHistory.length === 0) {
-                elements.chatContainer.innerHTML = `<div class="empty-state text-center h-100 d-flex flex-column justify-content-center align-items-center px-3"><div style="max-width:32rem"><h2 class="mb-2">1СХарнесс</h2><p class="lead mb-2">ИИ-агент на платформе 1С:Предприятие</p><p class="text-body-secondary mb-0">Запросы, отчёты и инструменты выполняются через 1С. Напишите сообщение или нажмите «Новый чат».</p></div></div>`;
+                elements.chatContainer.innerHTML = `<div class="kb-empty-state"><h2>1СХарнесс</h2><p class="kb-empty-lead">ИИ-агент на платформе 1С:Предприятие</p><p>Запросы, отчёты и инструменты выполняются через 1С. Напишите сообщение или нажмите «Новый диалог».</p></div>`;
             } else {
                 elements.chatContainer.innerHTML = '';
                 chatHistory.forEach(message => elements.chatContainer.appendChild(createMessageElement(message)));
@@ -1206,11 +1163,11 @@
             updateComposeContext();
         }
         function updateModelBubbleContent(messageId, newContent, isStreamingUpdate = false) {
-            const messageDiv = document.querySelector(`.model-message[data-message-id="${messageId}"] .message-body`);
+            const messageDiv = document.querySelector(`.kb-msg[data-message-id="${messageId}"][data-role="model"] .kb-msg-body`);
             if (!messageDiv) return;
             messageDiv.innerHTML = marked.parse(newContent || (isStreamingUpdate ? "" : "_(пустой ответ)_"));
             addCodeActionsToBubble(messageDiv);
-            if(isStreamingUpdate) scrollToBottom();
+            if (isStreamingUpdate) scrollToBottom();
         }
         function addCodeActionsToBubble(container) {
             container.querySelectorAll('pre').forEach(pre => {
@@ -1506,25 +1463,26 @@
         function populateSessions() {
             const sessions = getSessionIndex().slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
             elements.sessionsList.innerHTML = '';
+            openSessionMenuId = null;
             if (!sessions.length) {
-                elements.sessionsList.innerHTML = '<div class="small text-body-secondary px-2 py-1">Пока нет сохранённых чатов</div>';
+                const empty = document.createElement('li');
+                empty.className = 'kb-sessions-empty';
+                empty.textContent = 'Пока нет сохранённых диалогов';
+                elements.sessionsList.appendChild(empty);
                 return;
             }
             sessions.forEach(session => {
-                const item = document.createElement('div');
-                item.className = `list-group-item list-group-item-action p-0 ${session.id === currentSessionId ? 'active' : ''}`;
+                const item = document.createElement('li');
+                item.className = `kb-sess ${session.id === currentSessionId ? 'kb-sess--active' : ''}`;
                 item.dataset.sessionId = session.id;
                 item.innerHTML = `
-                    <div class="d-flex align-items-stretch w-100 session-row">
-                        <button type="button" class="btn session-open flex-grow-1 text-start text-truncate px-3 py-2">${escapeHtml(session.name)}</button>
-                        <div class="dropdown">
-                            <button type="button" class="btn session-menu px-2 py-2" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" aria-label="Действия с чатом">⋯</button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                <li><button type="button" class="dropdown-item" data-session-action="rename">Переименовать</button></li>
-                                <li><button type="button" class="dropdown-item" data-session-action="archive">Архивировать</button></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><button type="button" class="dropdown-item text-danger" data-session-action="delete">Удалить</button></li>
-                            </ul>
+                    <button type="button" class="kb-sess-btn" title="${escapeHtml(session.name)}">${escapeHtml(session.name)}</button>
+                    <div class="kb-sess-menu-wrap">
+                        <button type="button" class="kb-sess-menu-btn" aria-expanded="false" aria-label="Действия с диалогом">⋯</button>
+                        <div class="kb-sess-dropdown" hidden>
+                            <button type="button" class="kb-dropdown-item" data-session-action="rename">Переименовать</button>
+                            <button type="button" class="kb-dropdown-item" data-session-action="archive">Архивировать</button>
+                            <button type="button" class="kb-dropdown-item text-danger" data-session-action="delete">Удалить</button>
                         </div>
                     </div>`;
                 elements.sessionsList.appendChild(item);
