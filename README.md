@@ -16,15 +16,9 @@
 
 **Исходники в git:** иерархический XML в [`src/1CHarness/`](src/1CHarness/) (корень [`CHarness1C.xml`](src/1CHarness/CHarness1C.xml)). Отдельные файлы [`src/epf/*.bsl`](src/epf/) — черновики для v0.2 (HTML + мост); их нужно переносить в `Ext/*.bsl` внутри дерева XML.
 
-Сборка и выгрузка — **Конфигуратор в пакетном режиме** (`1cv8t` / `1cv8` + файловая ИБ). Перед запуском закройте сеансы 1С с этой ИБ или с открытой обработкой (иначе блокировка конфигурирования).
+Сборка и выгрузка — **Конфигуратор в пакетном режиме** (`DESIGNER /LoadExternalDataProcessorOrReportFromFiles`, `/DumpExternalDataProcessorOrReportToFiles` + файловая ИБ). Агент вызывает навыки **epf-build** / **epf-dump** из cc-1c-skills (без обёрточных shell-скриптов в репозитории). Перед запуском закройте сеансы 1С с этой ИБ.
 
-```bash
-chmod +x scripts/epf-build.sh scripts/epf-dump.sh
-./scripts/epf-build.sh          # XML → epf/1CHarness.epf
-./scripts/epf-dump.sh           # epf/1CHarness.epf → src/1CHarness/
-```
-
-Параметры платформы и ИБ: [`.v8-project.json`](.v8-project.json). Тестовая ИБ: `/workspace/bases/harness-empty` (не в git).
+Локально: скопируйте [`.v8-project.json.example`](.v8-project.json.example) → `.v8-project.json` (файл в `.gitignore`). Тестовая ИБ: каталог `bases/` (не в git).
 
 Мост UI → 1С: скрытый `#harness-1c-bridge` + `window.harnessDeliverResponse()`; опрос раз в секунду в модуле формы.
 
