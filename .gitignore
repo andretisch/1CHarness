@@ -11,6 +11,9 @@
 workspace/sessions/*.json
 !workspace/sessions/.gitkeep
 
+**/__pycache__/
+*.pyc
+
 # Справочник навыков (локальная копия cc-1c-skills, не коммитить)
 .cursor/cc-1c-skills-reference/
 
