@@ -293,7 +293,11 @@ html[data-palette="taxi"] {
 
 html[data-palette="taxi"] body {
   font-family: Tahoma, "Segoe UI", Arial, sans-serif;
-  background-image: none;
+  background-image: radial-gradient(
+    ellipse 120% 80% at 50% -20%,
+    rgba(255, 226, 137, 0.14),
+    transparent 55%
+  );
 }
 
 html[data-palette="taxi"] .kb-top {
@@ -319,22 +323,6 @@ html[data-palette="taxi"] .kb-sidebar-toggle-chevron {
   color: #000;
 }
 
-html[data-palette="taxi"] .kb-chat-backdrop::before {
-  opacity: 0;
-}
-
-html[data-palette="taxi"] .kb-chat-backdrop::after {
-  background-color: var(--surface);
-  background-image:
-    linear-gradient(45deg, #e8e8e8 25%, transparent 25%),
-    linear-gradient(-45deg, #e8e8e8 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #e8e8e8 75%),
-    linear-gradient(-45deg, transparent 75%, #e8e8e8 75%);
-  background-size: 24px 24px;
-  background-position: 0 0, 0 12px, 12px -12px, -12px 0;
-  opacity: 1;
-}
-
 html[data-palette="taxi"] .kb-btn-primary {
   background: linear-gradient(180deg, #fff5c0 0%, var(--accent) 100%);
   color: #000;
@@ -358,16 +346,6 @@ html[data-bs-theme="dark"][data-palette="taxi"] {
   --text: #f0f0f0;
   --muted: #c8c8c8;
   --accent: #8a7340;
-}
-
-html[data-bs-theme="dark"][data-palette="taxi"] .kb-chat-backdrop::after {
-  background-image:
-    linear-gradient(45deg, #333 25%, transparent 25%),
-    linear-gradient(-45deg, #333 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #333 75%),
-    linear-gradient(-45deg, transparent 75%, #333 75%);
-  background-size: 24px 24px;
-  background-color: var(--bg-page);
 }
 
 html[data-bs-theme="dark"] {

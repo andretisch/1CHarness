@@ -95,9 +95,6 @@
                         <button type="button" id="refreshSessionsBtn" class="kb-btn kb-btn-secondary kb-btn-block">Обновить список</button>
                     </div>
                     <ul id="sessionsList" class="kb-session-list" role="list"></ul>
-                    <div class="kb-sidebar-foot">
-                        <button type="button" id="settingsBtn" class="kb-btn kb-btn-secondary kb-btn-block" data-bs-toggle="modal" data-bs-target="#settingsModal">Настройки</button>
-                    </div>
                 </aside>
             </div>
             <button type="button" id="sidebarExpand" class="kb-sidebar-expand kb-btn kb-btn-secondary" aria-controls="kbSidebar" aria-label="Развернуть список диалогов" title="Развернуть список диалогов" hidden>
@@ -151,7 +148,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
                 </div>
                 <div class="modal-body">
-                    <ul class="nav nav-tabs" role="tablist">
+                    <ul class="nav nav-tabs flex-nowrap overflow-auto" role="tablist" style="scrollbar-width: thin;">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="tab-connection-btn" data-bs-toggle="tab" data-bs-target="#tab-connection" type="button" role="tab">Подключение</button>
                         </li>
@@ -199,7 +196,7 @@
                                     <option value="krabobot">Крабобот (синий)</option>
                                     <option value="taxi">1С Такси (шахматка)</option>
                                 </select>
-                                <div class="form-text">Оформление чата и боковой панели. Поле ввода остаётся в виде капсулы.</div>
+                                <div class="form-text">Цвета 1С Такси; подложка чата с логотипом — как у крабобота. Поле ввода — капсула.</div>
                             </div>
                             <div class="mb-3">
                                 <label for="brightnessSelect" class="form-label">Яркость</label>
@@ -257,7 +254,6 @@
             newChatBtn: document.getElementById('newChatBtn'),
             fileInput: document.getElementById('fileInput'),
             stagedFilesArea: document.getElementById('stagedFilesArea'),
-            settingsBtn: document.getElementById('settingsBtn'),
             settingsModal: document.getElementById('settingsModal'),
             activeModelLabel: document.getElementById('activeModelLabel'),
             modelsList: document.getElementById('modelsList'),
