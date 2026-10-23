@@ -4,7 +4,7 @@
 
 ## UI (старт)
 
-В корне лежит [`index.html`](index.html) — один HTML-файл чата на базе [openconstruct/llamahtml](https://github.com/openconstruct/llamahtml). Зависимости (Bootstrap, marked, highlight.js) лежат в [`vendor/`](vendor/) и подключаются локально, без CDN. Открывается в браузере или в **поле HTML документа** (Chromium, 8.3); пути `vendor/…` должны быть доступны относительно каталога с `index.html`.
+В корне лежит [`index.html`](index.html) — один HTML-файл чата на базе [openconstruct/llamahtml](https://github.com/openconstruct/llamahtml). Оформление (цвета, подложка чата) — как у [крабобот](https://github.com/andretisch/krabobot/tree/main/krabobot/web/static); **строка ввода** — компактная капсула как раньше. Зависимости (Bootstrap, marked, highlight.js) в [`vendor/`](vendor/); шрифт Nunito подгружается с Google Fonts (в 1С без сети останется system-ui). Открывается в браузере или в **поле HTML документа** (Chromium, 8.3).
 
 Интерфейс на русском; адрес сервера и модели — в **Настройках**; чаты сохраняются автоматически, у каждого пункта меню **⋯** (переименовать, архивировать, удалить).
 

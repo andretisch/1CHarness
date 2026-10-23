@@ -1,0 +1,11 @@
+/* Подсветка кода в тон палитре крабobот (тёмная) */
+.hljs {
+  color: #e8f0fb;
+  background: rgba(0, 0, 0, 0.25);
+}
+.hljs-comment, .hljs-quote { color: #8aa4c0; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag { color: #7eb8ff; font-weight: 600; }
+.hljs-string, .hljs-meta .hljs-string { color: #6ee7a8; }
+.hljs-number, .hljs-literal { color: #4da3ff; }
+.hljs-title, .hljs-section { color: #00e5ff; }
+.hljs-built_in, .hljs-type { color: #9ec5fe; }

@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1СХарнесс</title>
+    <meta name="theme-color" content="#003366">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700&display=swap" rel="stylesheet">
     <link href="vendor/bootstrap/5.3.3/bootstrap.min.css" rel="stylesheet">
-    <link href="vendor/theme/1c-taxi.css" rel="stylesheet">
+    <link href="vendor/theme/krabobot.css" rel="stylesheet">
     <script src="vendor/marked/marked.min.js"></script>
     <link rel="stylesheet" href="vendor/highlight.js/11.9.0/styles/1c-taxi-light.css" id="highlight-theme">
     <script src="vendor/highlight.js/11.9.0/highlight.min.js"></script>
@@ -67,14 +71,15 @@
             max-width: 760px;
             margin: 0 auto;
         }
+        /* Строка ввода — отдельно от палитры крабобот (как в Cursor-капсуле) */
         .compose-shell {
             display: flex;
             align-items: flex-end;
             gap: 8px;
             padding: 10px 12px;
-            border: 1px solid var(--1c-border, #a0a0a0);
+            border: 1px solid rgba(0, 0, 0, 0.1);
             border-radius: 22px;
-            background: var(--1c-surface, #fff);
+            background: #ffffff;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
         }
         .compose-icon-btn {
@@ -291,12 +296,15 @@
             </div>
         </aside>
         <main class="main-content flex-grow-1 d-flex flex-column">
-            <div class="chat-container p-3" id="chatContainer">
-                <div class="empty-state text-center h-100 d-flex flex-column justify-content-center align-items-center px-3">
-                    <div style="max-width: 32rem;">
-                        <h2 class="mb-2">1СХарнесс</h2>
-                        <p class="lead mb-2">ИИ-агент на платформе 1С:Предприятие</p>
-                        <p class="text-body-secondary mb-0">Запросы, отчёты и инструменты выполняются через 1С. Напишите сообщение или нажмите «Новый чат».</p>
+            <div class="chat-panel-stage">
+                <div class="chat-backdrop" aria-hidden="true"></div>
+                <div class="chat-container p-3" id="chatContainer">
+                    <div class="empty-state text-center h-100 d-flex flex-column justify-content-center align-items-center px-3">
+                        <div style="max-width: 32rem;">
+                            <h2 class="mb-2">1СХарнесс</h2>
+                            <p class="lead mb-2">ИИ-агент на платформе 1С:Предприятие</p>
+                            <p class="text-body-secondary mb-0">Запросы, отчёты и инструменты выполняются через 1С. Напишите сообщение или нажмите «Новый чат».</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -483,8 +491,8 @@
         function setTheme(theme) {
             document.documentElement.setAttribute('data-bs-theme', theme);
             elements.themeSwitcher.textContent = theme === 'dark' ? '☀️' : '🌙';
-            const lightThemeUrl = 'vendor/highlight.js/11.9.0/styles/1c-taxi-light.css';
-            const darkThemeUrl = 'vendor/highlight.js/11.9.0/styles/1c-taxi-dark.css';
+            const lightThemeUrl = 'vendor/highlight.js/11.9.0/styles/krabobot-light.css';
+            const darkThemeUrl = 'vendor/highlight.js/11.9.0/styles/krabobot-dark.css';
             elements.highlightTheme.href = theme === 'dark' ? darkThemeUrl : lightThemeUrl;
             localStorage.setItem('theme', theme);
         }
