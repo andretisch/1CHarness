@@ -8,7 +8,7 @@
 
 Интерфейс на русском; адрес сервера и модели — в **Настройках**; чаты сохраняются автоматически, у каждого пункта меню **⋯** (переименовать, архивировать, удалить).
 
-**Агент в браузере:** LLM — **прямой XHR** ([`web/js/llm-xhr.js`](web/js/llm-xhr.js)) на настроенный base URL (Ollama Cloud: `https://ollama.com/v1`, модель `gemma4:31b-cloud`, Bearer-ключ в настройках). Инструменты — **DOM-мост 1С** + [`stub-1c-platform.js`](web/js/stub-1c-platform.js). Статика: `python3 scripts/harness_dev.py`. Legacy llama-server: `?legacy=llama`.
+**Агент в браузере:** подключение к LLM — [`workspace/config.json`](workspace/config.json) (XHR через [`web/js/llm-xhr.js`](web/js/llm-xhr.js), read/write через мост 1С). Сессии — `workspace/sessions/*.json`, агенты — `workspace/agents/*.md`. Dev: [`stub-1c-platform.js`](web/js/stub-1c-platform.js). Статика: `python3 scripts/harness_dev.py`. После правок: `bash scripts/verify_harness.sh` (см. [AGENTS.md](AGENTS.md)).
 
 ## Внешняя обработка
 
