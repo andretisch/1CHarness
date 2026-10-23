@@ -218,6 +218,7 @@
             </div>
         </div>
     </div>
+    <script src="vendor/chart.js/chart.umd.min.js"></script>
     <script src="vendor/bootstrap/5.3.3/bootstrap.bundle.min.js"></script>
     <script>
         const SESSION_INDEX_KEY = 'llamaChatIndex';
@@ -265,7 +266,7 @@
             contextRingFill: document.getElementById('contextRingFill')
         };
         const CONTEXT_RING_CIRCUMFERENCE = 2 * Math.PI * 9;
-        const DEMO_SEED_VERSION = '2026-03-26';
+        const DEMO_SEED_VERSION = '2026-10-23-charts';
         const DEMO_SEED_FLAG = `llamaDemoSeed_${DEMO_SEED_VERSION}`;
         let contextMeterTooltip = null;
         const SEND_BUTTON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>';
@@ -493,6 +494,15 @@
     Организация.Наименование
 \`\`\`
 
+**Графики по тем же данным:**
+
+<div class="h-chart-grid">
+<figure class="h-chart-wrap"><figcaption>Конечный остаток по организациям (столбцы)</figcaption><canvas class="h-chart" data-harness-chart='{"type":"bar","labels":["ООО «Ромашка»","ИП Иванов"],"datasets":[{"label":"Конец, ₽","data":[1410000,110000]}]}'></canvas></figure>
+<figure class="h-chart-wrap"><figcaption>Остаток на 51 счёте по дням, март (линия)</figcaption><canvas class="h-chart" data-harness-chart='{"type":"line","labels":["01","05","10","15","20","25","31"],"datasets":[{"label":"Остаток, ₽","data":[1325000,1280000,1350000,1410000,1385000,1520000,1520000]}]}'></canvas></figure>
+<figure class="h-chart-wrap"><figcaption>Доля прихода за месяц (круг)</figcaption><canvas class="h-chart" data-harness-chart='{"type":"pie","labels":["ООО «Ромашка»","ИП Иванов"],"datasets":[{"label":"Приход","data":[890000,120000]}]}'></canvas></figure>
+<figure class="h-chart-wrap"><figcaption>Структура расхода (кольцо)</figcaption><canvas class="h-chart" data-harness-chart='{"type":"doughnut","labels":["ООО «Ромашка»","ИП Иванов"],"datasets":[{"label":"Расход","data":[720000,95000]}]}'></canvas></figure>
+</div>
+
 Могу выгрузить в Excel или добавить фильтр по подразделению.`, id: 'demo-m1' }
                     ]
                 },
@@ -555,7 +565,7 @@
             });
             saveSessionIndex(index);
             localStorage.setItem(DEMO_SEED_FLAG, '1');
-            showStatus('Демо-диалоги загружены. Переключайте чаты слева и тему 🌙.', 'info');
+            showStatus('Демо-диалоги загружены (таблица + графики в «Обороты по счёту 51»).', 'info');
         }
         function openSessionSilently(sessionId) {
             try {
@@ -580,6 +590,73 @@
                 langPrefix: 'hljs language-',
             });
         }
+        function harnessChartPalette() {
+            const taxi = document.documentElement.getAttribute('data-palette') === 'taxi';
+            const dark = (document.documentElement.getAttribute('data-bs-theme') || 'light') === 'dark';
+            if (taxi) {
+                return {
+                    colors: ['#ffe289', '#5c7a8a', '#e6c85a', '#8aa4c0', '#fff5c0'],
+                    grid: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                    text: dark ? '#e8f0fb' : '#404040'
+                };
+            }
+            return {
+                colors: ['#007bff', '#0d8f4a', '#00e5ff', '#5a6f85', '#004080'],
+                grid: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,51,102,0.08)',
+                text: dark ? '#8aa4c0' : '#5a6f85'
+            };
+        }
+        function destroyHarnessCharts(container) {
+            if (typeof Chart === 'undefined' || !container) return;
+            container.querySelectorAll('canvas.h-chart').forEach((canvas) => {
+                const existing = Chart.getChart(canvas);
+                if (existing) existing.destroy();
+            });
+        }
+        function buildHarnessChartConfig(spec) {
+            const pal = harnessChartPalette();
+            const datasets = (spec.datasets || []).map((ds, i) => ({
+                ...ds,
+                backgroundColor: ds.backgroundColor || (spec.type === 'line'
+                    ? pal.colors[i % pal.colors.length] + '33'
+                    : pal.colors.map((c, j) => pal.colors[(i + j) % pal.colors.length])),
+                borderColor: ds.borderColor || pal.colors[i % pal.colors.length],
+                borderWidth: ds.borderWidth ?? (spec.type === 'line' ? 2 : 1),
+                tension: ds.tension ?? 0.25,
+                fill: ds.fill ?? (spec.type === 'line' ? false : true)
+            }));
+            return {
+                type: spec.type || 'bar',
+                data: { labels: spec.labels || [], datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: datasets.length > 1 || ['pie', 'doughnut'].includes(spec.type),
+                            labels: { color: pal.text, boxWidth: 12, font: { size: 11 } }
+                        }
+                    },
+                    scales: ['pie', 'doughnut', 'radar'].includes(spec.type) ? {} : {
+                        x: { ticks: { color: pal.text, maxRotation: 0, autoSkip: true }, grid: { color: pal.grid } },
+                        y: { ticks: { color: pal.text }, grid: { color: pal.grid } }
+                    }
+                }
+            };
+        }
+        function initHarnessCharts(container) {
+            if (typeof Chart === 'undefined' || !container) return;
+            container.querySelectorAll('canvas.h-chart[data-harness-chart]').forEach((canvas) => {
+                if (Chart.getChart(canvas)) return;
+                let spec;
+                try {
+                    spec = JSON.parse(canvas.getAttribute('data-harness-chart'));
+                } catch (e) {
+                    return;
+                }
+                new Chart(canvas.getContext('2d'), buildHarnessChartConfig(spec));
+            });
+        }
         function setupEventListeners() {
             elements.sendButton.addEventListener('click', () => {
                 if (currentAbortController) handleStopGeneration();
@@ -593,10 +670,16 @@
                 });
             }
             if (elements.paletteSelect) {
-                elements.paletteSelect.addEventListener('change', () => setPalette(elements.paletteSelect.value));
+                elements.paletteSelect.addEventListener('change', () => {
+                    setPalette(elements.paletteSelect.value);
+                    refreshChartsInChat();
+                });
             }
             if (elements.brightnessSelect) {
-                elements.brightnessSelect.addEventListener('change', () => setTheme(elements.brightnessSelect.value));
+                elements.brightnessSelect.addEventListener('change', () => {
+                    setTheme(elements.brightnessSelect.value);
+                    refreshChartsInChat();
+                });
             }
             if (elements.sidebarCollapsedPref) {
                 elements.sidebarCollapsedPref.addEventListener('change', () => {
@@ -1142,7 +1225,10 @@
             const bodyElement = messageWrapper.querySelector('.kb-msg-body');
             if (message.role === 'model' && message.content) {
                 bodyElement.innerHTML = marked.parse(message.content);
-                requestAnimationFrame(() => addCodeActionsToBubble(bodyElement));
+                requestAnimationFrame(() => {
+                    addCodeActionsToBubble(bodyElement);
+                    initHarnessCharts(bodyElement);
+                });
             } else if (message.role === 'user') {
                 bodyElement.textContent = message.content;
             }
@@ -1152,6 +1238,7 @@
             if (chatHistory.length === 0) {
                 elements.chatContainer.innerHTML = `<div class="kb-empty-state"><h2>1СХарнесс</h2><p class="kb-empty-lead">ИИ-агент на платформе 1С:Предприятие</p><p>Запросы, отчёты и инструменты выполняются через 1С. Напишите сообщение или нажмите «Новый диалог».</p></div>`;
             } else {
+                destroyHarnessCharts(elements.chatContainer);
                 elements.chatContainer.innerHTML = '';
                 chatHistory.forEach(message => elements.chatContainer.appendChild(createMessageElement(message)));
                 scrollToBottom();
@@ -1161,8 +1248,10 @@
         function updateModelBubbleContent(messageId, newContent, isStreamingUpdate = false) {
             const messageDiv = document.querySelector(`.kb-msg[data-message-id="${messageId}"][data-role="model"] .kb-msg-body`);
             if (!messageDiv) return;
+            destroyHarnessCharts(messageDiv);
             messageDiv.innerHTML = marked.parse(newContent || (isStreamingUpdate ? "" : "_(пустой ответ)_"));
             addCodeActionsToBubble(messageDiv);
+            initHarnessCharts(messageDiv);
             if (isStreamingUpdate) scrollToBottom();
         }
         function addCodeActionsToBubble(container) {
