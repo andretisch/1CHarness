@@ -91,7 +91,6 @@
                             </button>
                         </div>
                         <button type="button" id="newChatBtn" class="kb-btn kb-btn-secondary kb-btn-block">Новый диалог</button>
-                        <button type="button" id="refreshSessionsBtn" class="kb-btn kb-btn-secondary kb-btn-block">Обновить список</button>
                     </div>
                     <ul id="sessionsList" class="kb-session-list" role="list"></ul>
                 </aside>
@@ -222,7 +221,6 @@
     <script type="module" src="web/js/harness-agent-boot.js"></script>
     <script>
         const SESSION_INDEX_KEY = 'llamaChatIndex';
-        const SESSION_ARCHIVE_KEY = 'llamaChatArchive';
         const SESSION_DATA_PREFIX = 'llamaChatSession_';
         const DEFAULT_SESSION_NAME = 'Новый чат';
         const MAX_TEXT_FILE_EMBED_SIZE = 200 * 1024;
@@ -243,7 +241,6 @@
             sidebarCollapsedPref: document.getElementById('sidebarCollapsedPref'),
             sidebarToggle: document.getElementById('sidebarToggle'),
             sidebarExpand: document.getElementById('sidebarExpand'),
-            refreshSessionsBtn: document.getElementById('refreshSessionsBtn'),
             headerMenuBtn: document.getElementById('headerMenuBtn'),
             headerMenuDropdown: document.getElementById('headerMenuDropdown'),
             headerSettingsBtn: document.getElementById('headerSettingsBtn'),
@@ -687,12 +684,6 @@
                 else handleSendPrompt();
             });
             elements.newChatBtn.addEventListener('click', () => startNewSession());
-            if (elements.refreshSessionsBtn) {
-                elements.refreshSessionsBtn.addEventListener('click', () => {
-                    populateSessions();
-                    showStatus('Список диалогов обновлён.', 'info');
-                });
-            }
             if (elements.paletteSelect) {
                 elements.paletteSelect.addEventListener('change', () => {
                     setPalette(elements.paletteSelect.value);
@@ -777,7 +768,6 @@
                     const sessionId = row.dataset.sessionId;
                     const action = actionBtn.dataset.sessionAction;
                     if (action === 'rename') handleRenameSession(sessionId);
-                    else if (action === 'archive') handleArchiveSession(sessionId);
                     else if (action === 'delete') handleDeleteSession(sessionId);
                     return;
                 }
@@ -1227,17 +1217,8 @@
                 return Array.isArray(index) ? index : [];
             } catch { return []; }
         }
-        function getArchiveIndex() {
-            try {
-                const index = JSON.parse(localStorage.getItem(SESSION_ARCHIVE_KEY));
-                return Array.isArray(index) ? index : [];
-            } catch { return []; }
-        }
         function saveSessionIndex(index) {
             localStorage.setItem(SESSION_INDEX_KEY, JSON.stringify(index));
-        }
-        function saveArchiveIndex(index) {
-            localStorage.setItem(SESSION_ARCHIVE_KEY, JSON.stringify(index));
         }
         function deriveSessionTitle() {
             const userMsg = chatHistory.find(m => m.role === 'user');
@@ -1299,7 +1280,6 @@
                         <button type="button" class="kb-sess-menu-btn" aria-expanded="false" aria-label="Действия с диалогом">⋯</button>
                         <div class="kb-sess-dropdown" hidden>
                             <button type="button" class="kb-dropdown-item" data-session-action="rename">Переименовать</button>
-                            <button type="button" class="kb-dropdown-item" data-session-action="archive">Архивировать</button>
                             <button type="button" class="kb-dropdown-item text-danger" data-session-action="delete">Удалить</button>
                         </div>
                     </div>`;
@@ -1347,18 +1327,6 @@
             saveSessionIndex(sessions);
             populateSessions();
             showStatus('Чат переименован.', 'success');
-        }
-        function handleArchiveSession(sessionId) {
-            const sessions = getSessionIndex();
-            const session = sessions.find(s => s.id === sessionId);
-            if (!session) return;
-            const archive = getArchiveIndex();
-            archive.unshift({ ...session, archivedAt: Date.now() });
-            saveArchiveIndex(archive.slice(0, 200));
-            saveSessionIndex(sessions.filter(s => s.id !== sessionId));
-            if (currentSessionId === sessionId) startNewSession();
-            else populateSessions();
-            showStatus(`«${session.name}» перенесён в архив.`, 'info');
         }
         function handleDeleteSession(sessionId) {
             const sessions = getSessionIndex();

@@ -6,7 +6,7 @@
 
 В корне лежит [`index.html`](index.html) — один HTML-файл чата на базе [openconstruct/llamahtml](https://github.com/openconstruct/llamahtml). Оформление (цвета, подложка чата) — как у [крабобот](https://github.com/andretisch/krabobot/tree/main/krabobot/web/static); **строка ввода** — компактная капсула как раньше. Зависимости (Bootstrap, marked, highlight.js) в [`vendor/`](vendor/); шрифт Nunito подгружается с Google Fonts (в 1С без сети останется system-ui). Открывается в браузере или в **поле HTML документа** (Chromium, 8.3).
 
-Интерфейс на русском; адрес сервера и модели — в **Настройках**; чаты сохраняются автоматически, у каждого пункта меню **⋯** (переименовать, архивировать, удалить).
+Интерфейс на русском; адрес сервера и модели — в **Настройках**; чаты сохраняются автоматически, у каждого пункта меню **⋯** (переименовать, удалить).
 
 **Агент в браузере:** подключение к LLM — [`workspace/config.json`](workspace/config.json) (XHR через [`web/js/llm-xhr.js`](web/js/llm-xhr.js), read/write через мост 1С). Сессии — `workspace/sessions/*.json`, агенты — `workspace/agents/*.md`. Dev: [`stub-1c-platform.js`](web/js/stub-1c-platform.js). `python3 scripts/harness_dev.py` — только статика; LLM — **прямой XHR** на `https://ollama.com/v1` из `config.json` (ключ в настройках / `OLLAMA_API_KEY` → dev-config). После правок: `bash scripts/verify_harness.sh` (см. [AGENTS.md](AGENTS.md)).
 
