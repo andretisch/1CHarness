@@ -1,0 +1,12 @@
+{
+  "v8path": "/opt/1cv8t/x86_64/8.3.27.2342/1cv8t",
+  "default": "harness-empty",
+  "databases": [
+    {
+      "id": "harness-empty",
+      "name": "harness-empty",
+      "path": "/workspace/bases/harness-empty",
+      "branches": ["main", "cursor/chat-ui-3ebd"]
+    }
+  ]
+}

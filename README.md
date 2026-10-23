@@ -14,18 +14,17 @@
 
 Файл [`epf/1CHarness.epf`](epf/1CHarness.epf) — обработка с формой и **полем HTML** (`index.html?backend=1c&demo=1`).
 
-**Из git одна только BSL не собирается.** Сейчас в репозитории:
+**Исходники в git:** иерархический XML в [`src/1CHarness/`](src/1CHarness/) (корень [`CHarness1C.xml`](src/1CHarness/CHarness1C.xml)). Отдельные файлы [`src/epf/*.bsl`](src/epf/) — черновики для v0.2 (HTML + мост); их нужно переносить в `Ext/*.bsl` внутри дерева XML.
 
-- бинарный `.epf` (источник правды для запуска);
-- черновики модулей в [`src/epf/*.bsl`](src/epf/) — их нужно вручную вставить в Конфигураторе или положить в дерево XML.
+Сборка и выгрузка — **Конфигуратор в пакетном режиме** (`1cv8t` / `1cv8` + файловая ИБ). Перед запуском закройте сеансы 1С с этой ИБ или с открытой обработкой (иначе блокировка конфигурирования).
 
-Воспроизводимая сборка — **иерархическая выгрузка XML** + скрипт платформы:
+```bash
+chmod +x scripts/epf-build.sh scripts/epf-dump.sh
+./scripts/epf-build.sh          # XML → epf/1CHarness.epf
+./scripts/epf-dump.sh           # epf/1CHarness.epf → src/1CHarness/
+```
 
-1. Разобрать EPF в каталог (например `src/1CHarness/`): выгрузка из Конфигуратора или [`epf-dump`](https://github.com/Nikolay-Shirokov/cc-1c-skills) (нужны полная платформа `1cv8`/`ibcmd` и файловая ИБ, не только учебный `1cv8t`).
-2. Править код в `Ext/ObjectModule.bsl`, `Forms/.../Ext/Form/Module.bsl` (можно синхронизировать с [`src/epf/`](src/epf/)).
-3. Собрать: [`epf-build`](https://github.com/Nikolay-Shirokov/cc-1c-skills) → обновить [`epf/1CHarness.epf`](epf/1CHarness.epf).
-
-Для автоматизации в проекте заводят `.v8-project.json` (путь к платформе и тестовой ИБ). Тестовая ИБ: `/workspace/bases/harness-empty` (не в git).
+Параметры платформы и ИБ: [`.v8-project.json`](.v8-project.json). Тестовая ИБ: `/workspace/bases/harness-empty` (не в git).
 
 Мост UI → 1С: скрытый `#harness-1c-bridge` + `window.harnessDeliverResponse()`; опрос раз в секунду в модуле формы.
 
