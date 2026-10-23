@@ -10,7 +10,7 @@ export function getLlmSettings() {
     apiBase: (c.apiBase || 'https://ollama.com/v1').replace(/\/+$/, ''),
     apiStyle: c.apiStyle === 'ollama' ? 'ollama' : 'openai',
     model: c.model || 'gemma4:31b-cloud',
-    apiKey: c.apiKey || '',
+    apiKey: c.apiKey || (typeof window !== 'undefined' && window.__HARNESS_LLM_API_KEY) || '',
     timeoutMs: DEFAULT_TIMEOUT_MS,
   };
 }

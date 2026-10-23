@@ -4,7 +4,7 @@ import {
   getAgentConfig,
 } from './agent-openai.js';
 import {
-  workspaceConfigReady,
+  ensureWorkspaceConfigLoaded,
   loadWorkspaceConfig,
   getConnectionSettings,
   updateConnectionSettings,
@@ -16,6 +16,8 @@ import { installStub1CPlatformOnBridge } from './stub-1c-platform.js';
 installDomBridgeListener();
 wireHarnessDeliverResponse();
 installStub1CPlatformOnBridge(isReal1CBridge);
+
+const workspaceConfigReady = ensureWorkspaceConfigLoaded();
 
 let cachedSystemPrompt = null;
 
@@ -53,6 +55,7 @@ export async function loadSessionJsonViaBridge(sessionId) {
  * @param {Array<{role:string,content:string}>} p.turnMessages user/assistant for API (no ids)
  */
 export async function runHarnessAgentTurn(p) {
+  await workspaceConfigReady;
   const system = await ensureSystemPrompt();
   const messages = [{ role: 'system', content: system }, ...p.turnMessages];
   return runAgentTurn({
@@ -78,3 +81,5 @@ window.HarnessAgent = {
   invoke1cTool,
   ensureSystemPrompt,
 };
+
+document.dispatchEvent(new CustomEvent('harness-agent-ready'));

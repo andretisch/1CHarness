@@ -25,13 +25,19 @@ function mergeConfig(raw) {
   };
 }
 
-function bootstrapApiKeyFromDevEnv() {
-  const key = typeof window !== 'undefined' && window.__HARNESS_LLM_API_KEY;
+function bootstrapFromDevEnv() {
+  let changed = false;
+  if (typeof window === 'undefined') return false;
+  if (window.__HARNESS_LLM_DEV_API_BASE && cache.connection.apiBase !== window.__HARNESS_LLM_DEV_API_BASE) {
+    cache.connection.apiBase = window.__HARNESS_LLM_DEV_API_BASE;
+    changed = true;
+  }
+  const key = window.__HARNESS_LLM_API_KEY;
   if (key && !cache.connection.apiKey) {
     cache.connection.apiKey = key;
-    return true;
+    changed = true;
   }
-  return false;
+  return changed;
 }
 
 async function writeConfigFile() {
@@ -51,8 +57,8 @@ export async function loadWorkspaceConfig() {
   } else {
     cache = mergeConfig(null);
   }
-  const wroteKey = bootstrapApiKeyFromDevEnv();
-  if (!out.ok || wroteKey) {
+  const devBootstrap = bootstrapFromDevEnv();
+  if (!out.ok || devBootstrap) {
     try {
       await writeConfigFile();
     } catch {
@@ -85,4 +91,15 @@ export async function updateGenerationSettings(partial) {
   return cache.generation;
 }
 
-export const workspaceConfigReady = loadWorkspaceConfig();
+/** Запускать только после installStub1CPlatformOnBridge (см. harness-agent-boot.js). */
+let configReadyPromise = null;
+
+export function ensureWorkspaceConfigLoaded() {
+  if (!configReadyPromise) {
+    configReadyPromise = loadWorkspaceConfig().catch((err) => {
+      configReadyPromise = null;
+      throw err;
+    });
+  }
+  return configReadyPromise;
+}

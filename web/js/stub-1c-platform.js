@@ -62,6 +62,8 @@ export function installStub1CPlatformOnBridge(isReal1C) {
       result: out.result,
       error: out.error,
     };
-    document.dispatchEvent(new CustomEvent('harness-1c-response', { detail: response }));
+    queueMicrotask(() => {
+      document.dispatchEvent(new CustomEvent('harness-1c-response', { detail: response }));
+    });
   });
 }

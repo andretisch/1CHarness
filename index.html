@@ -791,11 +791,11 @@
                 updateContextMeter();
             });
             elements.chatInput.addEventListener('keydown', (event) => {
-                if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault();
-                    if (!elements.sendButton.disabled && !currentAbortController) {
-                        handleSendPrompt();
-                    }
+                if (event.key !== 'Enter' || event.isComposing) return;
+                if (event.shiftKey) return;
+                event.preventDefault();
+                if (!elements.sendButton.disabled && !currentAbortController) {
+                    handleSendPrompt();
                 }
             });
             elements.fileInput.addEventListener('change', handleFileSelection);
@@ -1102,7 +1102,6 @@
             const modelMessage = { role: 'model', content: '', id: `msg-${messageCounter++}` };
             chatHistory.push(modelMessage);
             renderChatHistory();
-            saveAgentConnectionSettings();
             try {
                 const temperature = parseFloat(elements.temperature.value);
                 const result = await window.HarnessAgent.runHarnessAgentTurn({
@@ -1778,7 +1777,11 @@
             else populateSessions();
             showStatus(`«${session.name}» удалён.`, 'info');
         }
-        initialize();
+        if (window.HarnessAgent) {
+            initialize();
+        } else {
+            document.addEventListener('harness-agent-ready', () => { initialize(); }, { once: true });
+        }
     </script>
 </body>
 </html>

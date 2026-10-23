@@ -9,9 +9,10 @@
    (stub 1С, `workspace/config.json`, при наличии `OLLAMA_API_KEY` — короткий запрос к LLM).
 
 2. **UI / агент в браузере** (если менялись `index.html`, `web/js/*`, темы, чат):  
-   - `python3 scripts/harness_dev.py` (или уже поднятый `http.server` на порту из `HARNESS_WEB_PORT`, по умолчанию 8765);  
+   - `python3 scripts/harness_dev.py` (статика + same-origin `/dev-llm/*` для обхода CORS в браузере);  
    - открыть `http://127.0.0.1:<port>/index.html`;  
-   - убедиться, что настройки читаются из `workspace/config.json`, отправка сообщения не падает на первом шаге (XHR + мост).
+   - **Enter** (без Ctrl) отправляет сообщение; ответ модели появляется в диалоге.  
+   - опционально: `node scripts/browser_smoke_chat.mjs` (нужен `npm install playwright` в корне).
 
 3. **EPF / 1С** (если менялись `src/1CHarness/` или скрипты сборки):  
    `bash scripts/epf-build.sh` (и при необходимости dump).

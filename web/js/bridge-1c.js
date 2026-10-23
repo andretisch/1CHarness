@@ -52,8 +52,9 @@ export async function invoke1cTool(tool, args, options = {}) {
   const payload = { type: 'tool.invoke', id, tool, arguments: args || {} };
   const timeoutMs = options.timeoutMs ?? 30000;
 
+  const dataPromise = waitDomBridge(id, timeoutMs);
   postDomBridge(payload);
-  const data = await waitDomBridge(id, timeoutMs);
+  const data = await dataPromise;
   if (data.type === 'tool.result') {
     return { ok: !!data.ok, result: data.result, error: data.error };
   }
