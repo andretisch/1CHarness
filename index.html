@@ -153,9 +153,6 @@
                             <button class="nav-link active" id="tab-connection-btn" data-bs-toggle="tab" data-bs-target="#tab-connection" type="button" role="tab">Подключение</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab-models-btn" data-bs-toggle="tab" data-bs-target="#tab-models" type="button" role="tab">Модели</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
                             <button class="nav-link" id="tab-generation-btn" data-bs-toggle="tab" data-bs-target="#tab-generation" type="button" role="tab">Генерация</button>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -186,29 +183,10 @@
                                 <div class="form-text">Файл <code>config.json</code> в рабочей области агента (через мост 1С). В dev ключ может подставиться из <code>OLLAMA_API_KEY</code>.</div>
                             </div>
                             <div class="form-text mb-0">Инструменты — только через DOM-мост 1С (<code>#harness-1c-bridge</code>). В браузере платформу имитирует JS (<code>stub-1c-platform.js</code>); в обработке — <code>?backend=1c</code> и <code>harnessDeliverResponse</code>.</div>
-                            <details class="mb-0">
-                                <summary class="small text-body-secondary">Legacy llama-server</summary>
-                                <div class="mt-2">
-                                    <label for="serverUrl" class="form-label">Адрес llama-server</label>
-                                    <input type="url" class="form-control" id="serverUrl" placeholder="http://127.0.0.1:8080" value="http://127.0.0.1:8080">
-                                    <div class="form-text">Только с <code>?legacy=llama</code>.</div>
-                                </div>
-                            </details>
-                        </div>
-                        <div class="tab-pane fade" id="tab-models" role="tabpanel">
-                            <div class="mb-2 small text-body-secondary">Активная модель</div>
-                            <div class="mb-3 text-truncate fw-semibold" id="activeModelLabel">—</div>
-                            <div id="modelsList"></div>
-                            <div id="modelsNote" class="small text-body-secondary mt-2"></div>
-                            <button class="btn btn-outline-secondary btn-sm mt-2" type="button" id="refreshModelsBtn">Обновить список</button>
                         </div>
                         <div class="tab-pane fade" id="tab-generation" role="tabpanel">
                             <div class="mb-3"><label for="temperature" class="form-label">Температура</label><input type="number" class="form-control" id="temperature" min="0" max="2" step="0.1" value="0.7"><div class="form-text">Чем выше, тем разнообразнее ответ.</div></div>
-                            <div class="mb-3"><label for="nPredict" class="form-label">Макс. токенов ответа</label><input type="number" class="form-control" id="nPredict" min="1" step="1" value="2048"><div class="form-text">Лимит длины ответа модели.</div></div>
-                            <div class="mb-3"><label for="contextWindow" class="form-label">Размер контекста</label><input type="number" class="form-control" id="contextWindow" min="1024" step="1024" value="32768"><div class="form-text">Для индикатора заполнения под полем ввода (токены).</div></div>
-                            <div class="mb-3"><label for="topP" class="form-label">Top P</label><input type="number" class="form-control" id="topP" min="0" max="1" step="0.01" value="0.95"></div>
-                            <div class="mb-3"><label for="topK" class="form-label">Top K</label><input type="number" class="form-control" id="topK" min="1" step="1" value="40"></div>
-                            <div class="mb-0"><label for="stopSequences" class="form-label">Стоп-последовательности</label><input type="text" class="form-control" id="stopSequences" value="USER:, \nUSER:, <|user|>"><div class="form-text">Через запятую.</div></div>
+                            <div class="mb-0"><label for="contextWindow" class="form-label">Размер контекста</label><input type="number" class="form-control" id="contextWindow" min="1024" step="1024" value="32768"><div class="form-text">Для индикатора заполнения под полем ввода (токены).</div></div>
                         </div>
                         <div class="tab-pane fade" id="tab-interface" role="tabpanel">
                             <div class="mb-3">
@@ -250,7 +228,6 @@
         const DEFAULT_SESSION_NAME = 'Новый чат';
         const MAX_TEXT_FILE_EMBED_SIZE = 200 * 1024;
         const elements = {
-            serverUrl: document.getElementById('serverUrl'),
             openAiBaseUrl: document.getElementById('openAiBaseUrl'),
             openAiModel: document.getElementById('openAiModel'),
             llmApiStyle: document.getElementById('llmApiStyle'),
@@ -272,20 +249,12 @@
             headerMenuDropdown: document.getElementById('headerMenuDropdown'),
             headerSettingsBtn: document.getElementById('headerSettingsBtn'),
             temperature: document.getElementById('temperature'),
-            nPredict: document.getElementById('nPredict'),
             contextWindow: document.getElementById('contextWindow'),
-            topP: document.getElementById('topP'),
-            topK: document.getElementById('topK'),
-            stopSequences: document.getElementById('stopSequences'),
             sessionsList: document.getElementById('sessionsList'),
             newChatBtn: document.getElementById('newChatBtn'),
             fileInput: document.getElementById('fileInput'),
             stagedFilesArea: document.getElementById('stagedFilesArea'),
             settingsModal: document.getElementById('settingsModal'),
-            activeModelLabel: document.getElementById('activeModelLabel'),
-            modelsList: document.getElementById('modelsList'),
-            modelsNote: document.getElementById('modelsNote'),
-            refreshModelsBtn: document.getElementById('refreshModelsBtn'),
             highlightTheme: document.getElementById('highlight-theme'),
             composeContext: document.getElementById('composeContext'),
             contextMeter: document.getElementById('contextMeter'),
@@ -432,15 +401,8 @@
             initializeAppearance();
             configureMarked();
             initContextMeterTooltip();
-            if (harnessAgentMode()) {
-                const cfg = window.HarnessAgent?.getAgentConfig?.();
-                showStatus(`Агент: ${cfg?.model || 'gemma4:31b-cloud'} (OpenAI API), инструменты → мост 1С.`, 'info');
-            } else if (harnessBackendEnabled()) {
-                showStatus('Режим 1С DOM-мост (legacy chat).', 'info');
-            } else {
-                validateServerUrl();
-                refreshModels();
-            }
+            const cfg = window.HarnessAgent?.getAgentConfig?.();
+            showStatus(`Агент: ${cfg?.model || 'gemma4:31b-cloud'} (OpenAI API), инструменты → мост 1С.`, 'info');
             const demoMode = isDemoMode();
             if (demoMode) seedDemoSessionsIfNeeded();
             populateSessions();
@@ -772,7 +734,6 @@
                     bootstrap.Modal.getOrCreateInstance(elements.settingsModal).show();
                 });
             }
-            if (elements.rememberServerUrl) elements.rememberServerUrl.addEventListener('change', handleRememberUrlChange);
             if (elements.contextWindow) {
                 elements.contextWindow.addEventListener('change', () => {
                     saveContextWindowSetting();
@@ -784,7 +745,6 @@
             if (elements.openAiModel) elements.openAiModel.addEventListener('change', saveAgentConnectionSettings);
             if (elements.llmApiStyle) elements.llmApiStyle.addEventListener('change', saveAgentConnectionSettings);
             if (elements.llmApiKey) elements.llmApiKey.addEventListener('change', saveAgentConnectionSettings);
-            elements.serverUrl.addEventListener('input', handleServerUrlInput);
             elements.chatInput.addEventListener('input', () => {
                 updateSendButtonState();
                 autoResizeTextarea(elements.chatInput);
@@ -804,14 +764,10 @@
                 if (event.target.classList.contains('copy-code-button')) handleCopyCodeClick(event.target);
                 else if (event.target.classList.contains('download-code-button')) handleDownloadCodeClick(event.target);
             });
-            elements.modelsList.addEventListener('click', handleModelAction);
-            elements.refreshModelsBtn.addEventListener('click', refreshModels);
             elements.settingsModal.addEventListener('shown.bs.modal', () => {
-                if (!harnessAgentMode()) refreshModels();
                 if (elements.paletteSelect) elements.paletteSelect.value = document.documentElement.getAttribute('data-palette') || 'krabobot';
                 if (elements.brightnessSelect) elements.brightnessSelect.value = document.documentElement.getAttribute('data-bs-theme') || 'light';
             });
-            elements.settingsModal.addEventListener('hidden.bs.modal', () => clearTimeout(modelsPollTimer));
             elements.sessionsList.addEventListener('click', function(event) {
                 const actionBtn = event.target.closest('[data-session-action]');
                 if (actionBtn) {
@@ -876,58 +832,15 @@
             textarea.style.height = 'auto';
             textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
         }
-        function loadServerUrl() {
-            const rememberedUrl = localStorage.getItem('llamaServerUrl');
-            const shouldRemember = localStorage.getItem('rememberLlamaServerUrl') === 'true';
-            if (elements.rememberServerUrl) elements.rememberServerUrl.checked = shouldRemember;
-            if (shouldRemember && rememberedUrl && elements.serverUrl) {
-                elements.serverUrl.value = rememberedUrl;
-            }
-        }
-        function handleRememberUrlChange() {
-            if (elements.rememberServerUrl?.checked) {
-                localStorage.setItem('llamaServerUrl', elements.serverUrl.value.trim());
-                localStorage.setItem('rememberLlamaServerUrl', 'true');
-            } else {
-                localStorage.removeItem('llamaServerUrl');
-                localStorage.removeItem('rememberLlamaServerUrl');
-            }
-        }
-        let serverUrlDebounceTimer;
-        function handleServerUrlInput() {
-            if (elements.rememberServerUrl?.checked && elements.serverUrl) {
-                localStorage.setItem('llamaServerUrl', elements.serverUrl.value.trim());
-            }
-            clearTimeout(serverUrlDebounceTimer);
-            serverUrlDebounceTimer = setTimeout(validateServerUrl, 500);
-        }
-        function validateServerUrl() {
-            const serverUrl = elements.serverUrl.value.trim();
-            if (!isValidHttpUrl(serverUrl)) {
-                showStatus("Неверный формат адреса сервера.", "danger");
-            } else {
-                showStatus("Адрес сервера принят.", "info");
-            }
-            updateSendButtonState();
-        }
         function updateSendButtonState() {
             if (currentAbortController) {
                 elements.sendButton.disabled = false;
                 return;
             }
-            const urlValid = harnessAgentMode() || harnessBackendEnabled() || isValidHttpUrl(elements.serverUrl.value.trim());
             const isLoading = (elements.headerStatus && elements.headerStatus.querySelector('.kb-status-spinner')) ||
                 (elements.statusBar && elements.statusBar.querySelector('.spinner-border') !== null);
-            const canSend = urlValid && !isLoading && (elements.chatInput.value.trim().length > 0 || stagedFiles.length > 0);
+            const canSend = !isLoading && (elements.chatInput.value.trim().length > 0 || stagedFiles.length > 0);
             elements.sendButton.disabled = !canSend;
-        }
-        function isValidHttpUrl(string) {
-            try {
-                const url = new URL(string);
-                return url.protocol === "http:" || url.protocol === "https:";
-            } catch (_) {
-                return false;
-            }
         }
         function handleFileSelection(event) {
             const files = event.target.files;
@@ -1143,11 +1056,6 @@
             setSendButtonMode('stop');
             elements.chatInput.disabled = true;
             let promptText = elements.chatInput.value.trim();
-            const temperature = parseFloat(elements.temperature.value);
-            const nPredict = parseInt(elements.nPredict.value, 10);
-            const topP = parseFloat(elements.topP.value);
-            const topK = parseInt(elements.topK.value, 10);
-            const stopSequences = elements.stopSequences.value.split(',').map(s => s.trim()).filter(Boolean);
             if (!promptText && stagedFiles.length === 0) {
                 showStatus("Сообщение не может быть пустым.", "warning");
                 resetButtonToSendState();
@@ -1177,7 +1085,7 @@
                 fileInfoForPrompt += "\nUser Message:\n";
             }
             const fullUserContent = fileInfoForPrompt + promptText;
-            if (harnessAgentMode() && window.HarnessAgent?.runHarnessAgentTurn) {
+            if (window.HarnessAgent?.runHarnessAgentTurn) {
                 await handleSendPromptAgent(promptText, fullUserContent);
                 return;
             }
@@ -1185,132 +1093,15 @@
                 await handleSendPrompt1C(promptText, fullUserContent);
                 return;
             }
-            const serverUrl = elements.serverUrl.value.trim();
-            if (currentAbortController) currentAbortController.abort();
-            currentAbortController = new AbortController();
-            const userMessage = { role: 'user', content: fullUserContent, id: `msg-${messageCounter++}` };
-            chatHistory.push(userMessage);
-            persistCurrentSession();
-            renderChatHistory();
-            elements.chatInput.value = '';
-            autoResizeTextarea(elements.chatInput);
-            clearStagedFiles();
-            showLoading(true, "Подключение…");
-            const modelMessage = { role: 'model', content: '', id: `msg-${messageCounter++}` };
-            chatHistory.push(modelMessage);
-            renderChatHistory();
-            const fullPromptForLlama = formatChatHistoryForLlama(chatHistory.slice(0, -1));
-            if (serverModels?.length && !activeModelId) {
-                const pick = serverModels.find(m => m.status === 'loaded') || serverModels[0];
-                setActiveModel(pick.id);
-            }
-            const requestBody = {
-                prompt: fullPromptForLlama, stream: true,
-                temperature, top_p: topP, top_k: topK,
-                n_predict: nPredict === -1 ? -1 : Math.max(1, nPredict),
-                stop: stopSequences
-            };
-            if (serverModels && activeModelId) requestBody.model = activeModelId;
-            let bubbleUpdateQueued = false;
-            const queueBubbleUpdate = () => {
-                if (bubbleUpdateQueued) return;
-                bubbleUpdateQueued = true;
-                requestAnimationFrame(() => {
-                    bubbleUpdateQueued = false;
-                    if (currentAbortController) updateModelBubbleContent(modelMessage.id, modelMessage.content, true);
-                });
-            };
-            let responseOk = false;
-            try {
-                const response = await fetch(`${serverUrl}/completion`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody),
-                    signal: currentAbortController.signal,
-                });
-                responseOk = response.ok;
-                if (!response.ok || !response.body) throw new Error(`API Error: ${response.status} ${response.statusText}`);
-                showLoading(true, "Получение ответа…");
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                const parser = createSSEParser();
-                let stopped = false;
-                while (!stopped) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    for (const data of parser.push(decoder.decode(value, { stream: true }))) {
-                        if (data.content) {
-                            modelMessage.content += data.content;
-                            queueBubbleUpdate();
-                        }
-                        if (data.stop) { stopped = true; break; }
-                    }
-                }
-                if (!stopped) {
-                    for (const data of parser.flush()) {
-                        if (data.content) modelMessage.content += data.content;
-                    }
-                }
-                showStatus("Ответ получен.", "success");
-                persistCurrentSession();
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    showStatus("Запрос остановлен.", "info");
-                    persistCurrentSession();
-                    if (chatHistory[chatHistory.length - 1].content.length < 15) chatHistory.pop();
-                } else {
-                    const errorMsg = !responseOk ? `Не удалось подключиться к серверу.` : error.message;
-                    showStatus(`Ошибка: ${errorMsg}`, "danger");
-                    chatHistory.pop();
-                    chatHistory.pop();
-                    elements.chatInput.value = promptText;
-                    autoResizeTextarea(elements.chatInput);
-                }
-                renderChatHistory();
-            } finally {
-                updateModelBubbleContent(modelMessage.id, modelMessage.content, false);
-                resetButtonToSendState();
-                showLoading(false);
-                elements.chatInput.disabled = false;
-                currentAbortController = null;
-                updateSendButtonState();
-                elements.chatInput.focus();
-            }
-        }
-        // Buffers partial stream events across chunks so a response is never cut off mid-event.
-        function createSSEParser() {
-            let buffer = '';
-            const parseEvent = (raw) => {
-                const line = raw.trim();
-                if (!line.startsWith('data: ')) return null;
-                try { return JSON.parse(line.substring(6)); } catch { return null; }
-            };
-            return {
-                push(text) {
-                    buffer += text;
-                    const parts = buffer.split('\n\n');
-                    buffer = parts.pop();
-                    return parts.map(parseEvent).filter(Boolean);
-                },
-                flush() {
-                    const data = parseEvent(buffer);
-                    buffer = '';
-                    return data ? [data] : [];
-                }
-            };
+            showStatus('Агент не загружен.', 'danger');
+            resetButtonToSendState();
+            elements.chatInput.disabled = false;
         }
         function handleStopGeneration() {
             if (currentAbortController) currentAbortController.abort();
         }
         function resetButtonToSendState() {
             setSendButtonMode('send');
-        }
-        function formatChatHistoryForLlama(history) {
-            return history.map(msg => {
-                if (msg.role === 'user') return `USER: ${msg.content}`;
-                if (msg.role === 'model') return `ASSISTANT: ${msg.content}`;
-                return '';
-            }).join('\n') + '\nASSISTANT:';
         }
         function paintHeaderStatus(message, type, isLoading) {
             if (!elements.headerStatus) return;
@@ -1430,203 +1221,6 @@
         }
         function scrollToBottom() {
             elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
-        }
-        const ACTIVE_MODEL_KEY = 'llamaActiveModel';
-        let activeModelId = localStorage.getItem(ACTIVE_MODEL_KEY) || null;
-        let serverModels = null;
-        let modelsPollTimer = null;
-        function modelStatusValue(model) {
-            if (!model.status) return null;
-            return typeof model.status === 'object' ? (model.status.value || null) : model.status;
-        }
-        function normalizeModels(payload) {
-            const list = Array.isArray(payload) ? payload : (payload?.data || []);
-            return list.filter(m => m && m.id).map(m => ({ id: m.id, status: modelStatusValue(m) }));
-        }
-        async function fetchModels() {
-            const res = await fetch(`${elements.serverUrl.value.trim()}/models`);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return normalizeModels(await res.json());
-        }
-        async function modelAdminFetch(path, body) {
-            const send = () => fetch(`${elements.serverUrl.value.trim()}${path}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(sessionStorage.getItem('llamaApiKey') ? { 'Authorization': `Bearer ${sessionStorage.getItem('llamaApiKey')}` } : {})
-                },
-                body: JSON.stringify(body)
-            });
-            let res = await send();
-            if (res.status === 401) {
-                const key = prompt('This server requires an API key for model management. Enter it (kept only for this browser tab session):');
-                if (key?.trim()) {
-                    sessionStorage.setItem('llamaApiKey', key.trim());
-                    res = await send();
-                }
-            }
-            return res;
-        }
-        function setActiveModel(id) {
-            activeModelId = id;
-            if (id) localStorage.setItem(ACTIVE_MODEL_KEY, id);
-            else localStorage.removeItem(ACTIVE_MODEL_KEY);
-            updateActiveModelLabel();
-        }
-        function updateActiveModelLabel() {
-            let text = 'Модель не выбрана';
-            if (serverModels) {
-                if (activeModelId) text = activeModelId;
-                else {
-                    const loaded = serverModels.find(m => m.status === 'loaded');
-                    text = loaded ? loaded.id : 'Модель не загружена';
-                }
-            }
-            elements.activeModelLabel.textContent = text;
-            elements.activeModelLabel.title = text;
-        }
-        async function refreshModels() {
-            try {
-                const models = await fetchModels();
-                // A single-model (classic) server also answers /models, but its
-                // entries carry no lifecycle status. Only router mode has those.
-                if (models.length && models.every(m => m.status === null)) throw new Error('single-model server');
-                serverModels = models;
-                if (activeModelId && !serverModels.some(m => m.id === activeModelId)) setActiveModel(null);
-                renderModelsList();
-                updateActiveModelLabel();
-                scheduleModelsPoll();
-            } catch (e) {
-                serverModels = null;
-                renderClassicModelInfo();
-            }
-        }
-        function scheduleModelsPoll() {
-            clearTimeout(modelsPollTimer);
-            const anyLoading = serverModels?.some(m => m.status === 'loading');
-            if (anyLoading || elements.settingsModal.classList.contains('show')) {
-                modelsPollTimer = setTimeout(refreshModels, 2000);
-            }
-        }
-        function renderModelsList() {
-            elements.modelsList.innerHTML = '';
-            if (!serverModels || serverModels.length === 0) {
-                elements.modelsList.innerHTML = '<p class="text-body-secondary mb-0">Сервер не вернул список моделей.</p>';
-                elements.modelsNote.textContent = '';
-                return;
-            }
-            serverModels.forEach(model => {
-                const row = document.createElement('div');
-                row.className = 'd-flex justify-content-between align-items-center border rounded p-2 mb-2';
-                const left = document.createElement('div');
-                left.className = 'text-truncate me-2';
-                const name = document.createElement('div');
-                name.className = 'fw-semibold text-truncate';
-                name.textContent = model.id;
-                const badge = document.createElement('span');
-                badge.className = `badge ${model.status === 'loaded' ? 'text-bg-success' : model.status === 'loading' ? 'text-bg-warning' : 'text-bg-secondary'}`;
-                const statusRu = { loaded: 'загружена', loading: 'загрузка', unloaded: 'не загружена', error: 'ошибка' };
-                const statusLabel = statusRu[model.status] || model.status;
-                badge.textContent = statusLabel + (model.id === activeModelId && model.status === 'loaded' ? ' · активна' : '');
-                left.append(name, badge);
-                const actions = document.createElement('div');
-                actions.className = 'd-flex gap-1 flex-shrink-0';
-                const addBtn = (label, action, style = 'btn-outline-primary') => {
-                    const b = document.createElement('button');
-                    b.className = `btn btn-sm ${style}`;
-                    b.textContent = label;
-                    b.dataset.action = action;
-                    b.dataset.modelId = model.id;
-                    actions.appendChild(b);
-                };
-                if (model.status === 'loaded') {
-                    if (model.id !== activeModelId) addBtn('Выбрать', 'use');
-                    addBtn('Перезагрузить', 'reload', 'btn-outline-secondary');
-                    addBtn('Выгрузить', 'unload', 'btn-outline-danger');
-                } else if (model.status === 'loading') {
-                    const s = document.createElement('span');
-                    s.className = 'text-body-secondary small';
-                    s.textContent = 'Загрузка…';
-                    actions.appendChild(s);
-                } else {
-                    addBtn('Загрузить', 'load');
-                }
-                row.append(left, actions);
-                elements.modelsList.appendChild(row);
-            });
-            elements.modelsNote.textContent = 'Загрузка больших моделей может занять время. Выгрузка освобождает память на сервере.';
-        }
-        async function renderClassicModelInfo() {
-            elements.modelsList.innerHTML = '';
-            let current = null;
-            try {
-                const res = await fetch(`${elements.serverUrl.value.trim()}/props`);
-                if (res.ok) {
-                    const props = await res.json();
-                    if (props.model_path) current = props.model_path.split('/').pop();
-                }
-            } catch (e) { /* server unreachable or no /props */ }
-            const p = document.createElement('p');
-            p.className = 'mb-0';
-            p.textContent = current ? `Текущая модель: ${current}` : 'Не удалось получить информацию о модели с сервера.';
-            elements.modelsList.appendChild(p);
-            elements.modelsNote.textContent = 'Сервер в режиме одной модели: загрузка и выгрузка из браузера недоступны. Для переключения моделей запустите llama-server в router mode.';
-            elements.activeModelLabel.textContent = current || '—';
-            elements.activeModelLabel.title = current || '';
-        }
-        async function pollModelStatus(id, want, timeoutMs = 180000) {
-            const start = Date.now();
-            while (Date.now() - start < timeoutMs) {
-                serverModels = await fetchModels();
-                renderModelsList();
-                updateActiveModelLabel();
-                const m = serverModels.find(x => x.id === id);
-                if (m && m.status === want) return;
-                if (m && m.status === 'error') throw new Error(`Server reported an error for ${id}`);
-                await new Promise(r => setTimeout(r, 1000));
-            }
-            throw new Error(`Timed out waiting for ${id} to become ${want}`);
-        }
-        async function handleModelAction(event) {
-            const btn = event.target.closest('[data-action]');
-            if (!btn || btn.disabled) return;
-            const { action, modelId } = btn.dataset;
-            if (action === 'use') {
-                setActiveModel(modelId);
-                renderModelsList();
-                showStatus(`Активная модель: ${modelId}`, 'success');
-                return;
-            }
-            btn.disabled = true;
-            try {
-                if (action === 'load') {
-                    showStatus(`Загрузка ${modelId}…`, 'info');
-                    const res = await modelAdminFetch('/models/load', { model: modelId });
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    await pollModelStatus(modelId, 'loaded');
-                    if (!activeModelId) setActiveModel(modelId);
-                    showStatus(`Модель загружена: ${modelId}`, 'success');
-                } else if (action === 'unload') {
-                    if (!confirm(`Выгрузить ${modelId}? Память на сервере будет освобождена.`)) return;
-                    const res = await modelAdminFetch('/models/unload', { model: modelId });
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    if (activeModelId === modelId) setActiveModel(null);
-                    showStatus(`Модель выгружена: ${modelId}`, 'info');
-                } else if (action === 'reload') {
-                    showStatus(`Перезагрузка ${modelId}…`, 'info');
-                    const un = await modelAdminFetch('/models/unload', { model: modelId });
-                    if (!un.ok) throw new Error(`HTTP ${un.status}`);
-                    await pollModelStatus(modelId, 'unloaded');
-                    const lo = await modelAdminFetch('/models/load', { model: modelId });
-                    if (!lo.ok) throw new Error(`HTTP ${lo.status}`);
-                    await pollModelStatus(modelId, 'loaded');
-                    showStatus(`Модель перезагружена: ${modelId}`, 'success');
-                }
-            } catch (e) {
-                showStatus(`Ошибка модели: ${e.message}`, 'danger');
-            } finally {
-                refreshModels();
-            }
         }
         function getSessionIndex() {
             try {

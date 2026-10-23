@@ -22,8 +22,6 @@ const workspaceConfigReady = ensureWorkspaceConfigLoaded();
 let cachedSystemPrompt = null;
 
 export function harnessAgentEnabled() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('legacy') === 'llama') return false;
   return true;
 }
 
