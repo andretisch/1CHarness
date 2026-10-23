@@ -25,11 +25,20 @@ function mergeConfig(raw) {
   };
 }
 
+const DEV_PROXY_BASE_RE = /\/dev-llm\/|127\.0\.0\.1:\d+\/dev-llm/i;
+
+function normalizeApiBase(base) {
+  const b = String(base || '').trim();
+  if (!b || DEV_PROXY_BASE_RE.test(b)) return DEFAULT_CONFIG.connection.apiBase;
+  return b;
+}
+
 function bootstrapFromDevEnv() {
   let changed = false;
   if (typeof window === 'undefined') return false;
-  if (window.__HARNESS_LLM_DEV_API_BASE && cache.connection.apiBase !== window.__HARNESS_LLM_DEV_API_BASE) {
-    cache.connection.apiBase = window.__HARNESS_LLM_DEV_API_BASE;
+  const normalized = normalizeApiBase(cache.connection.apiBase);
+  if (normalized !== cache.connection.apiBase) {
+    cache.connection.apiBase = normalized;
     changed = true;
   }
   const key = window.__HARNESS_LLM_API_KEY;
@@ -57,6 +66,7 @@ export async function loadWorkspaceConfig() {
   } else {
     cache = mergeConfig(null);
   }
+  cache.connection.apiBase = normalizeApiBase(cache.connection.apiBase);
   const devBootstrap = bootstrapFromDevEnv();
   if (!out.ok || devBootstrap) {
     try {

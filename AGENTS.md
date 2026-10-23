@@ -9,7 +9,7 @@
    (stub 1С, `workspace/config.json`, при наличии `OLLAMA_API_KEY` — короткий запрос к LLM).
 
 2. **UI / агент в браузере** (если менялись `index.html`, `web/js/*`, темы, чат):  
-   - `python3 scripts/harness_dev.py` (статика + same-origin `/dev-llm/*` для обхода CORS в браузере);  
+   - `python3 scripts/harness_dev.py` (статика; LLM — прямой XHR на URL из `config.json`);  
    - открыть `http://127.0.0.1:<port>/index.html`;  
    - **Enter** (без Ctrl) отправляет сообщение; ответ модели появляется в диалоге.  
    - опционально: `node scripts/browser_smoke_chat.mjs` (нужен `npm install playwright` в корне).

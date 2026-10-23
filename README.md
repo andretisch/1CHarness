@@ -8,7 +8,7 @@
 
 Интерфейс на русском; адрес сервера и модели — в **Настройках**; чаты сохраняются автоматически, у каждого пункта меню **⋯** (переименовать, архивировать, удалить).
 
-**Агент в браузере:** подключение к LLM — [`workspace/config.json`](workspace/config.json) (XHR через [`web/js/llm-xhr.js`](web/js/llm-xhr.js), read/write через мост 1С). Сессии — `workspace/sessions/*.json`, агенты — `workspace/agents/*.md`. Dev: [`stub-1c-platform.js`](web/js/stub-1c-platform.js). `python3 scripts/harness_dev.py` — статика и `/dev-llm/v1` (same-origin, ключ из `OLLAMA_API_KEY`). В 1С — прямой XHR на URL из `config.json`. После правок: `bash scripts/verify_harness.sh` (см. [AGENTS.md](AGENTS.md)).
+**Агент в браузере:** подключение к LLM — [`workspace/config.json`](workspace/config.json) (XHR через [`web/js/llm-xhr.js`](web/js/llm-xhr.js), read/write через мост 1С). Сессии — `workspace/sessions/*.json`, агенты — `workspace/agents/*.md`. Dev: [`stub-1c-platform.js`](web/js/stub-1c-platform.js). `python3 scripts/harness_dev.py` — только статика; LLM — **прямой XHR** на `https://ollama.com/v1` из `config.json` (ключ в настройках / `OLLAMA_API_KEY` → dev-config). После правок: `bash scripts/verify_harness.sh` (см. [AGENTS.md](AGENTS.md)).
 
 ## Внешняя обработка
 
