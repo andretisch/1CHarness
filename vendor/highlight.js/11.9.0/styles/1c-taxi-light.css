@@ -1,0 +1,40 @@
+/* Подсветка кода в тон палитре 1С (светлая) */
+pre code.hljs,
+code.hljs {
+  background: #f2f2f2;
+  color: #000;
+}
+.hljs-comment,
+.hljs-quote {
+  color: #606060;
+  font-style: italic;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-subst {
+  color: #0b5394;
+}
+.hljs-string,
+.hljs-meta,
+.hljs-template-tag {
+  color: #2e7d32;
+}
+.hljs-number,
+.hljs-literal {
+  color: #6a1b9a;
+}
+.hljs-title,
+.hljs-section,
+.hljs-type {
+  color: #000;
+  font-weight: 600;
+}
+.hljs-built_in,
+.hljs-name {
+  color: #5c7a8a;
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable {
+  color: #404040;
+}
