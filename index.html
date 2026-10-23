@@ -183,7 +183,7 @@
                             <div class="mb-3">
                                 <label for="llmApiKey" class="form-label">API-ключ (Bearer)</label>
                                 <input type="password" class="form-control" id="llmApiKey" autocomplete="off" placeholder="Ollama Cloud — ключ с ollama.com">
-                                <div class="form-text">Хранится только в localStorage этого браузера. Пусто — без Authorization.</div>
+                                <div class="form-text">Файл <code>config.json</code> в рабочей области агента (через мост 1С). В dev ключ может подставиться из <code>OLLAMA_API_KEY</code>.</div>
                             </div>
                             <div class="form-text mb-0">Инструменты — только через DOM-мост 1С (<code>#harness-1c-bridge</code>). В браузере платформу имитирует JS (<code>stub-1c-platform.js</code>); в обработке — <code>?backend=1c</code> и <code>harnessDeliverResponse</code>.</div>
                             <details class="mb-0">
@@ -398,36 +398,35 @@
             if (elements.sidebarCollapsedPref) elements.sidebarCollapsedPref.checked = collapsed;
             setSidebarCollapsed(collapsed);
         }
-        function loadAgentConnectionSettings() {
-            const base = localStorage.getItem('harnessLlmApiBase') || localStorage.getItem('harnessOpenAiBase') || 'https://ollama.com/v1';
-            const model = localStorage.getItem('harnessOpenAiModel') || 'gemma4:31b-cloud';
-            const style = localStorage.getItem('harnessLlmApiStyle') || 'openai';
-            if (elements.openAiBaseUrl) elements.openAiBaseUrl.value = base;
-            if (elements.openAiModel) elements.openAiModel.value = model;
-            if (elements.llmApiStyle) elements.llmApiStyle.value = style;
-            if (elements.llmApiKey) elements.llmApiKey.value = localStorage.getItem('harnessLlmApiKey') || '';
-            if (!localStorage.getItem('harnessLlmApiKey') && window.__HARNESS_LLM_API_KEY) {
-                localStorage.setItem('harnessLlmApiKey', window.__HARNESS_LLM_API_KEY);
-                if (elements.llmApiKey) elements.llmApiKey.value = window.__HARNESS_LLM_API_KEY;
-            }
+        async function loadAgentConnectionSettings() {
+            if (!harnessAgentMode() || !window.HarnessAgent?.workspaceConfigReady) return;
+            await window.HarnessAgent.workspaceConfigReady;
+            const c = window.HarnessAgent.getConnectionSettings();
+            if (elements.openAiBaseUrl) elements.openAiBaseUrl.value = c.apiBase || 'https://ollama.com/v1';
+            if (elements.openAiModel) elements.openAiModel.value = c.model || 'gemma4:31b-cloud';
+            if (elements.llmApiStyle) elements.llmApiStyle.value = c.apiStyle || 'openai';
+            if (elements.llmApiKey) elements.llmApiKey.value = c.apiKey ? '••••••••' : '';
         }
-        function saveAgentConnectionSettings() {
-            if (elements.openAiBaseUrl) {
-                const v = elements.openAiBaseUrl.value.trim();
-                localStorage.setItem('harnessLlmApiBase', v);
-                localStorage.setItem('harnessOpenAiBase', v);
-            }
-            if (elements.openAiModel) localStorage.setItem('harnessOpenAiModel', elements.openAiModel.value.trim());
-            if (elements.llmApiStyle) localStorage.setItem('harnessLlmApiStyle', elements.llmApiStyle.value);
-            if (elements.llmApiKey && elements.llmApiKey.value) {
-                localStorage.setItem('harnessLlmApiKey', elements.llmApiKey.value);
-            }
+        async function saveAgentConnectionSettings() {
+            if (!harnessAgentMode() || !window.HarnessAgent?.updateConnectionSettings) return;
+            const patch = {
+                apiBase: elements.openAiBaseUrl?.value.trim(),
+                apiStyle: elements.llmApiStyle?.value,
+                model: elements.openAiModel?.value.trim(),
+            };
+            const keyInput = elements.llmApiKey?.value?.trim();
+            if (keyInput && keyInput !== '••••••••') patch.apiKey = keyInput;
+            await window.HarnessAgent.updateConnectionSettings(patch);
+            if (elements.llmApiKey && patch.apiKey) elements.llmApiKey.value = '••••••••';
         }
         function harnessAgentMode() {
             return window.HarnessAgent?.enabled?.() !== false;
         }
-        function initialize() {
-            loadAgentConnectionSettings();
+        async function initialize() {
+            if (harnessAgentMode() && window.HarnessAgent?.workspaceConfigReady) {
+                await window.HarnessAgent.workspaceConfigReady;
+            }
+            await loadAgentConnectionSettings();
             loadGenerationSettings();
             setupEventListeners();
             initializeAppearance();

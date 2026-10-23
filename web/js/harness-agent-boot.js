@@ -3,6 +3,13 @@ import {
   loadSystemPromptViaBridge,
   getAgentConfig,
 } from './agent-openai.js';
+import {
+  workspaceConfigReady,
+  loadWorkspaceConfig,
+  getConnectionSettings,
+  updateConnectionSettings,
+  updateGenerationSettings,
+} from './agent-config.js';
 import { installDomBridgeListener, wireHarnessDeliverResponse, invoke1cTool, isReal1CBridge } from './bridge-1c.js';
 import { installStub1CPlatformOnBridge } from './stub-1c-platform.js';
 
@@ -60,6 +67,11 @@ export async function runHarnessAgentTurn(p) {
 window.HarnessAgent = {
   enabled: harnessAgentEnabled,
   getAgentConfig,
+  workspaceConfigReady,
+  loadWorkspaceConfig,
+  getConnectionSettings,
+  updateConnectionSettings,
+  updateGenerationSettings,
   runHarnessAgentTurn,
   persistSessionJsonViaBridge,
   loadSessionJsonViaBridge,

@@ -1,0 +1,11 @@
+{
+  "connection": {
+    "apiBase": "https://ollama.com/v1",
+    "apiStyle": "openai",
+    "model": "gemma4:31b-cloud",
+    "apiKey": ""
+  },
+  "generation": {
+    "temperature": 0.4
+  }
+}

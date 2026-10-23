@@ -1,29 +1,18 @@
 /** Прямой XHR к LLM (OpenAI-compatible или Ollama /api/chat), без локального прокси. */
 
-const DEFAULTS = {
-  apiBase: 'https://ollama.com/v1',
-  apiStyle: 'openai',
-  model: 'gemma4:31b-cloud',
-  timeoutMs: 300000,
-};
+import { getConnectionSettings } from './agent-config.js';
+
+const DEFAULT_TIMEOUT_MS = 300000;
 
 export function getLlmSettings() {
-  const apiBase = (localStorage.getItem('harnessLlmApiBase') || DEFAULTS.apiBase).replace(/\/+$/, '');
-  const apiStyle = localStorage.getItem('harnessLlmApiStyle') || DEFAULTS.apiStyle;
+  const c = getConnectionSettings();
   return {
-    apiBase,
-    apiStyle: apiStyle === 'ollama' ? 'ollama' : 'openai',
-    model: localStorage.getItem('harnessOpenAiModel') || DEFAULTS.model,
-    apiKey: localStorage.getItem('harnessLlmApiKey') || (typeof window !== 'undefined' && window.__HARNESS_LLM_API_KEY) || '',
-    timeoutMs: DEFAULTS.timeoutMs,
+    apiBase: (c.apiBase || 'https://ollama.com/v1').replace(/\/+$/, ''),
+    apiStyle: c.apiStyle === 'ollama' ? 'ollama' : 'openai',
+    model: c.model || 'gemma4:31b-cloud',
+    apiKey: c.apiKey || '',
+    timeoutMs: DEFAULT_TIMEOUT_MS,
   };
-}
-
-export function saveLlmSettingsFromForm({ apiBase, apiStyle, model, apiKey }) {
-  if (apiBase != null) localStorage.setItem('harnessLlmApiBase', apiBase.trim());
-  if (apiStyle != null) localStorage.setItem('harnessLlmApiStyle', apiStyle);
-  if (model != null) localStorage.setItem('harnessOpenAiModel', model.trim());
-  if (apiKey != null && apiKey !== '') localStorage.setItem('harnessLlmApiKey', apiKey);
 }
 
 /** @param {'openai'|'ollama'} apiStyle */
