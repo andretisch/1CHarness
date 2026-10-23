@@ -6,5 +6,6 @@
 | --- | --- |
 | `bootstrap/5.3.3/` | Bootstrap 5.3.3 (MIT) |
 | `marked/marked.min.js` | [marked](https://github.com/markedjs/marked) (npm jsdelivr) |
-| `highlight.js/11.9.0/` | highlight.js 11.9.0 (BSD); темы `1c-taxi-*.css` — свои |
-| `theme/1c-taxi.css` | Палитра интерфейса 1С (Такси), поверх Bootstrap |
+| `highlight.js/11.9.0/` | highlight.js 11.9.0 (BSD); темы `krabobot-*.css` |
+| `theme/krabobot.css` | Палитра крабобот, поверх Bootstrap |
+| `assets/krabobot-logo.png` | Водяной знак подложки чата (из krabobot) |
