@@ -165,14 +165,27 @@
                     <div class="tab-content pt-3">
                         <div class="tab-pane fade show active" id="tab-connection" role="tabpanel">
                             <div class="mb-3">
-                                <label for="serverUrl" class="form-label">Адрес LLM-сервера</label>
-                                <input type="url" class="form-control" id="serverUrl" placeholder="http://127.0.0.1:8080" value="http://127.0.0.1:8080">
-                                <div class="form-text">Сейчас используется протокол llama-server (<code>/completion</code>).</div>
+                                <label for="openAiBaseUrl" class="form-label">OpenAI-compatible API (base URL)</label>
+                                <input type="url" class="form-control" id="openAiBaseUrl" placeholder="http://127.0.0.1:8768/v1" value="http://127.0.0.1:8768/v1">
+                                <div class="form-text">Ollama Cloud: локальный прокси <code>scripts/ollama_proxy.py</code> → <code>https://ollama.com/v1</code> (ключ в <code>OLLAMA_API_KEY</code>).</div>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="rememberServerUrl">
-                                <label class="form-check-label" for="rememberServerUrl">Запомнить адрес</label>
+                            <div class="mb-3">
+                                <label for="openAiModel" class="form-label">Модель</label>
+                                <input type="text" class="form-control" id="openAiModel" value="gemma4:31b-cloud">
                             </div>
+                            <div class="mb-3">
+                                <label for="bridgeUrl" class="form-label">Мост 1С (stub / платформа)</label>
+                                <input type="url" class="form-control" id="bridgeUrl" value="http://127.0.0.1:8769/invoke">
+                                <div class="form-text">Инструменты только через мост. В 1С: <code>?backend=1c</code> — DOM-мост; в браузере — Python stub.</div>
+                            </div>
+                            <details class="mb-0">
+                                <summary class="small text-body-secondary">Legacy llama-server</summary>
+                                <div class="mt-2">
+                                    <label for="serverUrl" class="form-label">Адрес llama-server</label>
+                                    <input type="url" class="form-control" id="serverUrl" placeholder="http://127.0.0.1:8080" value="http://127.0.0.1:8080">
+                                    <div class="form-text">Только с <code>?legacy=llama</code>.</div>
+                                </div>
+                            </details>
                         </div>
                         <div class="tab-pane fade" id="tab-models" role="tabpanel">
                             <div class="mb-2 small text-body-secondary">Активная модель</div>
@@ -220,6 +233,7 @@
     </div>
     <script src="vendor/chart.js/chart.umd.min.js"></script>
     <script src="vendor/bootstrap/5.3.3/bootstrap.bundle.min.js"></script>
+    <script type="module" src="web/js/harness-agent-boot.js"></script>
     <script>
         const SESSION_INDEX_KEY = 'llamaChatIndex';
         const SESSION_ARCHIVE_KEY = 'llamaChatArchive';
@@ -228,7 +242,9 @@
         const MAX_TEXT_FILE_EMBED_SIZE = 200 * 1024;
         const elements = {
             serverUrl: document.getElementById('serverUrl'),
-            rememberServerUrl: document.getElementById('rememberServerUrl'),
+            openAiBaseUrl: document.getElementById('openAiBaseUrl'),
+            openAiModel: document.getElementById('openAiModel'),
+            bridgeUrl: document.getElementById('bridgeUrl'),
             chatInput: document.getElementById('chatInput'),
             sendButton: document.getElementById('sendButton'),
             statusBar: document.getElementById('statusBar'),
@@ -372,15 +388,34 @@
             if (elements.sidebarCollapsedPref) elements.sidebarCollapsedPref.checked = collapsed;
             setSidebarCollapsed(collapsed);
         }
+        function loadAgentConnectionSettings() {
+            const base = localStorage.getItem('harnessOpenAiBase') || 'http://127.0.0.1:8768/v1';
+            const model = localStorage.getItem('harnessOpenAiModel') || 'gemma4:31b-cloud';
+            const bridge = localStorage.getItem('harnessBridgeUrl') || 'http://127.0.0.1:8769/invoke';
+            if (elements.openAiBaseUrl) elements.openAiBaseUrl.value = base;
+            if (elements.openAiModel) elements.openAiModel.value = model;
+            if (elements.bridgeUrl) elements.bridgeUrl.value = bridge;
+        }
+        function saveAgentConnectionSettings() {
+            if (elements.openAiBaseUrl) localStorage.setItem('harnessOpenAiBase', elements.openAiBaseUrl.value.trim());
+            if (elements.openAiModel) localStorage.setItem('harnessOpenAiModel', elements.openAiModel.value.trim());
+            if (elements.bridgeUrl) localStorage.setItem('harnessBridgeUrl', elements.bridgeUrl.value.trim());
+        }
+        function harnessAgentMode() {
+            return window.HarnessAgent?.enabled?.() !== false;
+        }
         function initialize() {
-            loadServerUrl();
+            loadAgentConnectionSettings();
             loadGenerationSettings();
             setupEventListeners();
             initializeAppearance();
             configureMarked();
             initContextMeterTooltip();
-            if (harnessBackendEnabled()) {
-                showStatus('Режим 1С: запросы уходят в обработку, не в llama-server.', 'info');
+            if (harnessAgentMode()) {
+                const cfg = window.HarnessAgent?.getAgentConfig?.();
+                showStatus(`Агент: ${cfg?.model || 'gemma4:31b-cloud'} (OpenAI API), инструменты → мост 1С.`, 'info');
+            } else if (harnessBackendEnabled()) {
+                showStatus('Режим 1С DOM-мост (legacy chat).', 'info');
             } else {
                 validateServerUrl();
                 refreshModels();
@@ -657,6 +692,13 @@
                 new Chart(canvas.getContext('2d'), buildHarnessChartConfig(spec));
             });
         }
+        function refreshChartsInChat() {
+            if (!elements.chatContainer) return;
+            elements.chatContainer.querySelectorAll('.kb-msg-body').forEach((body) => {
+                destroyHarnessCharts(body);
+                initHarnessCharts(body);
+            });
+        }
         function setupEventListeners() {
             elements.sendButton.addEventListener('click', () => {
                 if (currentAbortController) handleStopGeneration();
@@ -709,7 +751,7 @@
                     bootstrap.Modal.getOrCreateInstance(elements.settingsModal).show();
                 });
             }
-            elements.rememberServerUrl.addEventListener('change', handleRememberUrlChange);
+            if (elements.rememberServerUrl) elements.rememberServerUrl.addEventListener('change', handleRememberUrlChange);
             if (elements.contextWindow) {
                 elements.contextWindow.addEventListener('change', () => {
                     saveContextWindowSetting();
@@ -717,6 +759,9 @@
                 });
                 elements.contextWindow.addEventListener('input', updateContextMeter);
             }
+            if (elements.openAiBaseUrl) elements.openAiBaseUrl.addEventListener('change', saveAgentConnectionSettings);
+            if (elements.openAiModel) elements.openAiModel.addEventListener('change', saveAgentConnectionSettings);
+            if (elements.bridgeUrl) elements.bridgeUrl.addEventListener('change', saveAgentConnectionSettings);
             elements.serverUrl.addEventListener('input', handleServerUrlInput);
             elements.chatInput.addEventListener('input', () => {
                 updateSendButtonState();
@@ -812,13 +857,13 @@
         function loadServerUrl() {
             const rememberedUrl = localStorage.getItem('llamaServerUrl');
             const shouldRemember = localStorage.getItem('rememberLlamaServerUrl') === 'true';
-            elements.rememberServerUrl.checked = shouldRemember;
-            if (shouldRemember && rememberedUrl) {
+            if (elements.rememberServerUrl) elements.rememberServerUrl.checked = shouldRemember;
+            if (shouldRemember && rememberedUrl && elements.serverUrl) {
                 elements.serverUrl.value = rememberedUrl;
             }
         }
         function handleRememberUrlChange() {
-            if (elements.rememberServerUrl.checked) {
+            if (elements.rememberServerUrl?.checked) {
                 localStorage.setItem('llamaServerUrl', elements.serverUrl.value.trim());
                 localStorage.setItem('rememberLlamaServerUrl', 'true');
             } else {
@@ -828,7 +873,7 @@
         }
         let serverUrlDebounceTimer;
         function handleServerUrlInput() {
-            if (elements.rememberServerUrl.checked) {
+            if (elements.rememberServerUrl?.checked && elements.serverUrl) {
                 localStorage.setItem('llamaServerUrl', elements.serverUrl.value.trim());
             }
             clearTimeout(serverUrlDebounceTimer);
@@ -848,7 +893,7 @@
                 elements.sendButton.disabled = false;
                 return;
             }
-            const urlValid = harnessBackendEnabled() || isValidHttpUrl(elements.serverUrl.value.trim());
+            const urlValid = harnessAgentMode() || harnessBackendEnabled() || isValidHttpUrl(elements.serverUrl.value.trim());
             const isLoading = (elements.headerStatus && elements.headerStatus.querySelector('.kb-status-spinner')) ||
                 (elements.statusBar && elements.statusBar.querySelector('.spinner-border') !== null);
             const canSend = urlValid && !isLoading && (elements.chatInput.value.trim().length > 0 || stagedFiles.length > 0);
@@ -1012,6 +1057,67 @@
                 elements.chatInput.focus();
             }
         }
+        function chatHistoryToOpenAiTurn(excludeLastAssistant) {
+            const list = excludeLastAssistant ? chatHistory.slice(0, -1) : chatHistory;
+            return list.map(m => ({
+                role: m.role === 'model' ? 'assistant' : m.role === 'user' ? 'user' : m.role,
+                content: m.content || ''
+            })).filter(m => m.role === 'user' || m.role === 'assistant');
+        }
+        async function handleSendPromptAgent(promptText, fullUserContent) {
+            setSendButtonMode('stop');
+            elements.chatInput.disabled = true;
+            if (currentAbortController) currentAbortController.abort();
+            currentAbortController = new AbortController();
+            const userMessage = { role: 'user', content: fullUserContent, id: `msg-${messageCounter++}` };
+            chatHistory.push(userMessage);
+            persistCurrentSession();
+            renderChatHistory();
+            elements.chatInput.value = '';
+            autoResizeTextarea(elements.chatInput);
+            clearStagedFiles();
+            showLoading(true, 'Агент…');
+            const modelMessage = { role: 'model', content: '', id: `msg-${messageCounter++}` };
+            chatHistory.push(modelMessage);
+            renderChatHistory();
+            saveAgentConnectionSettings();
+            try {
+                const temperature = parseFloat(elements.temperature.value);
+                const result = await window.HarnessAgent.runHarnessAgentTurn({
+                    turnMessages: chatHistoryToOpenAiTurn(true),
+                    signal: currentAbortController.signal,
+                    temperature: Number.isFinite(temperature) ? temperature : 0.4,
+                    onToolEvent(ev) {
+                        if (ev.phase === 'start') showLoading(true, `1С: ${ev.name}…`);
+                    },
+                });
+                if (currentAbortController?.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+                modelMessage.content = result.content || '_(пустой ответ)_';
+                showStatus('Ответ получен.', 'success');
+                persistCurrentSession();
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    showStatus('Запрос остановлен.', 'info');
+                    if (chatHistory[chatHistory.length - 1].content.length < 15) chatHistory.pop();
+                    chatHistory.pop();
+                } else {
+                    showStatus(`Ошибка: ${error.message}`, 'danger');
+                    chatHistory.pop();
+                    chatHistory.pop();
+                    elements.chatInput.value = promptText;
+                    autoResizeTextarea(elements.chatInput);
+                }
+                renderChatHistory();
+            } finally {
+                updateModelBubbleContent(modelMessage.id, modelMessage.content, false);
+                resetButtonToSendState();
+                showLoading(false);
+                elements.chatInput.disabled = false;
+                currentAbortController = null;
+                updateSendButtonState();
+                elements.chatInput.focus();
+            }
+        }
         async function handleSendPrompt() {
             setSendButtonMode('stop');
             elements.chatInput.disabled = true;
@@ -1050,6 +1156,10 @@
                 fileInfoForPrompt += "\nUser Message:\n";
             }
             const fullUserContent = fileInfoForPrompt + promptText;
+            if (harnessAgentMode() && window.HarnessAgent?.runHarnessAgentTurn) {
+                await handleSendPromptAgent(promptText, fullUserContent);
+                return;
+            }
             if (harnessBackendEnabled()) {
                 await handleSendPrompt1C(promptText, fullUserContent);
                 return;
@@ -1544,6 +1654,15 @@
             saveSessionIndex(sessions);
             populateSessions();
             updateComposeContext();
+            if (harnessAgentMode() && window.HarnessAgent?.persistSessionJsonViaBridge) {
+                const session = sessions.find(s => s.id === currentSessionId);
+                window.HarnessAgent.persistSessionJsonViaBridge(currentSessionId, {
+                    id: currentSessionId,
+                    name: session?.name || DEFAULT_SESSION_NAME,
+                    updatedAt: session?.updatedAt || Date.now(),
+                    messages: chatHistory
+                }).catch(() => {});
+            }
         }
         function populateSessions() {
             const sessions = getSessionIndex().slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
