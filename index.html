@@ -268,6 +268,7 @@
     </style>
 </head>
 <body>
+    <div id="harness-1c-bridge" hidden aria-hidden="true"></div>
     <div class="app-container d-flex">
         <button class="btn btn-light d-md-none m-2 position-fixed" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" style="z-index: 1045; top: 0; left: 0;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
@@ -433,6 +434,48 @@
         let currentAbortController = null;
         let stagedFiles = [];
         let sidebarInstance = null;
+        let harnessHostResponseResolver = null;
+        function harnessBackendEnabled() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('backend') === '1c' || window.__1CHarnessBackend === true;
+        }
+        function harnessPostToHost(envelope) {
+            const json = JSON.stringify(envelope);
+            const bridge = document.getElementById('harness-1c-bridge');
+            if (bridge) {
+                bridge.textContent = json;
+                bridge.dataset.seq = String(Date.now());
+            }
+            try {
+                if (window.HarnessNative && typeof window.HarnessNative.postMessage === 'function') {
+                    window.HarnessNative.postMessage(json);
+                }
+            } catch (e) { /* not in 1C host */ }
+            document.dispatchEvent(new CustomEvent('harness-1c-request', { detail: envelope }));
+        }
+        window.harnessDeliverResponse = function(payload) {
+            const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
+            if (harnessHostResponseResolver) {
+                harnessHostResponseResolver(data);
+                harnessHostResponseResolver = null;
+            }
+        };
+        function waitHarnessHostResponse(timeoutMs) {
+            return new Promise((resolve) => {
+                const timer = setTimeout(() => {
+                    harnessHostResponseResolver = null;
+                    resolve(null);
+                }, timeoutMs);
+                harnessHostResponseResolver = (data) => {
+                    clearTimeout(timer);
+                    resolve(data);
+                };
+            });
+        }
+        function harnessDefaultReply(userText) {
+            const line = String(userText || '').split('\n').find(l => l.trim()) || '(пусто)';
+            return `**1СХарнесс (v0.2)**\n\nЗапрос принят на стороне 1С. Модуль ответа пока заглушка — подключите \`ОбработатьСообщение\` в модуле формы обработки.\n\n> ${line.trim().slice(0, 200)}`;
+        }
         function initializeTheme() {
             const savedTheme = localStorage.getItem('theme') || 'light';
             setTheme(savedTheme);
@@ -458,8 +501,12 @@
             initializeTheme();
             configureMarked();
             initContextMeterTooltip();
-            validateServerUrl();
-            refreshModels();
+            if (harnessBackendEnabled()) {
+                showStatus('Режим 1С: запросы уходят в обработку, не в llama-server.', 'info');
+            } else {
+                validateServerUrl();
+                refreshModels();
+            }
             const demoMode = isDemoMode();
             if (demoMode) seedDemoSessionsIfNeeded();
             populateSessions();
@@ -770,7 +817,7 @@
                 elements.sendButton.disabled = false;
                 return;
             }
-            const urlValid = isValidHttpUrl(elements.serverUrl.value.trim());
+            const urlValid = harnessBackendEnabled() || isValidHttpUrl(elements.serverUrl.value.trim());
             const isLoading = elements.statusBar.querySelector('.spinner-border') !== null;
             const canSend = urlValid && !isLoading && (elements.chatInput.value.trim().length > 0 || stagedFiles.length > 0);
             elements.sendButton.disabled = !canSend;
@@ -874,10 +921,68 @@
             renderStagedFiles();
             elements.fileInput.value = null;
         }
+        async function handleSendPrompt1C(promptText, fullUserContent) {
+            setSendButtonMode('stop');
+            elements.chatInput.disabled = true;
+            if (currentAbortController) currentAbortController.abort();
+            currentAbortController = new AbortController();
+            const userMessage = { role: 'user', content: fullUserContent, id: `msg-${messageCounter++}` };
+            chatHistory.push(userMessage);
+            persistCurrentSession();
+            renderChatHistory();
+            elements.chatInput.value = '';
+            autoResizeTextarea(elements.chatInput);
+            clearStagedFiles();
+            showLoading(true, '1С…');
+            const modelMessage = { role: 'model', content: '', id: `msg-${messageCounter++}` };
+            chatHistory.push(modelMessage);
+            renderChatHistory();
+            const envelope = {
+                type: 'chat.completion',
+                messages: chatHistory.slice(0, -1).map(m => ({
+                    role: m.role === 'model' ? 'assistant' : m.role,
+                    content: m.content
+                }))
+            };
+            harnessPostToHost(envelope);
+            try {
+                const hostData = await waitHarnessHostResponse(12000);
+                if (currentAbortController?.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+                if (hostData && (hostData.content || hostData.text)) {
+                    modelMessage.content = hostData.content || hostData.text;
+                } else if (hostData && hostData.error) {
+                    modelMessage.content = `**Ошибка 1С:** ${hostData.error}`;
+                } else {
+                    modelMessage.content = harnessDefaultReply(promptText);
+                }
+                showStatus('Ответ от 1С.', 'success');
+                persistCurrentSession();
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    showStatus('Запрос остановлен.', 'info');
+                    if (chatHistory[chatHistory.length - 1].content.length < 15) chatHistory.pop();
+                    chatHistory.pop();
+                } else {
+                    showStatus(`Ошибка: ${error.message}`, 'danger');
+                    chatHistory.pop();
+                    chatHistory.pop();
+                    elements.chatInput.value = promptText;
+                    autoResizeTextarea(elements.chatInput);
+                }
+                renderChatHistory();
+            } finally {
+                updateModelBubbleContent(modelMessage.id, modelMessage.content, false);
+                resetButtonToSendState();
+                showLoading(false);
+                elements.chatInput.disabled = false;
+                currentAbortController = null;
+                updateSendButtonState();
+                elements.chatInput.focus();
+            }
+        }
         async function handleSendPrompt() {
             setSendButtonMode('stop');
             elements.chatInput.disabled = true;
-            const serverUrl = elements.serverUrl.value.trim();
             let promptText = elements.chatInput.value.trim();
             const temperature = parseFloat(elements.temperature.value);
             const nPredict = parseInt(elements.nPredict.value, 10);
@@ -913,6 +1018,11 @@
                 fileInfoForPrompt += "\nUser Message:\n";
             }
             const fullUserContent = fileInfoForPrompt + promptText;
+            if (harnessBackendEnabled()) {
+                await handleSendPrompt1C(promptText, fullUserContent);
+                return;
+            }
+            const serverUrl = elements.serverUrl.value.trim();
             if (currentAbortController) currentAbortController.abort();
             currentAbortController = new AbortController();
             const userMessage = { role: 'user', content: fullUserContent, id: `msg-${messageCounter++}` };
