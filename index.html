@@ -807,7 +807,7 @@
             elements.modelsList.addEventListener('click', handleModelAction);
             elements.refreshModelsBtn.addEventListener('click', refreshModels);
             elements.settingsModal.addEventListener('shown.bs.modal', () => {
-                refreshModels();
+                if (!harnessAgentMode()) refreshModels();
                 if (elements.paletteSelect) elements.paletteSelect.value = document.documentElement.getAttribute('data-palette') || 'krabobot';
                 if (elements.brightnessSelect) elements.brightnessSelect.value = document.documentElement.getAttribute('data-bs-theme') || 'light';
             });

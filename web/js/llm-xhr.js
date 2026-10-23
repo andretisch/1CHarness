@@ -29,6 +29,20 @@ export function buildLlmUrl(apiBase, path) {
   return base + p;
 }
 
+/** localhost + ollama.com в config → same-origin relay (CORS); в 1С — прямой URL. */
+export function resolveLlmPostUrl(apiBase, path) {
+  const direct = buildLlmUrl(apiBase, path);
+  if (typeof window === 'undefined') return direct;
+  const host = window.location.hostname;
+  const localDev = host === 'localhost' || host === '127.0.0.1';
+  const ollamaCloud = /ollama\.com/i.test(apiBase);
+  if (localDev && ollamaCloud) {
+    const p = path.startsWith('/') ? path : `/${path}`;
+    return `${window.location.origin}/dev-llm/v1${p.replace(/^\/v1/, '')}`;
+  }
+  return direct;
+}
+
 function applyLlmAuthHeaders(xhr, apiKey) {
   if (apiKey) {
     xhr.setRequestHeader('Authorization', `Bearer ${apiKey}`);
@@ -41,7 +55,7 @@ function applyLlmAuthHeaders(xhr, apiKey) {
 export function postLlmViaXhr(payload, options = {}) {
   const settings = getLlmSettings();
   const path = llmChatPath(settings.apiStyle);
-  const url = buildLlmUrl(settings.apiBase, path);
+  const url = resolveLlmPostUrl(settings.apiBase, path);
   const timeoutMs = options.timeoutMs ?? settings.timeoutMs;
   const signal = options.signal;
 

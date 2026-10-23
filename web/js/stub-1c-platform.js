@@ -2,6 +2,7 @@
 
 const VFS_PREFIX = 'harness:vfs:';
 const WORKSPACE_URL_PREFIX = '/workspace/';
+const DEV_PROXY_BASE_RE = /\/dev-llm\/|127\.0\.0\.1:\d+\/dev-llm/i;
 
 function normalizePath(rel) {
   let p = String(rel || '').trim().replace(/\\/g, '/').replace(/^\/+/, '');
@@ -17,12 +18,36 @@ function vfsSet(path, content) {
   localStorage.setItem(VFS_PREFIX + path, content ?? '');
 }
 
+function vfsRemove(path) {
+  localStorage.removeItem(VFS_PREFIX + path);
+}
+
+function configJsonUsesDevProxy(content) {
+  try {
+    const o = JSON.parse(content);
+    return DEV_PROXY_BASE_RE.test(o?.connection?.apiBase || '');
+  } catch {
+    return false;
+  }
+}
+
 export async function stub1cExecuteTool(name, args) {
   args = args || {};
   try {
     if (name === 'read_file') {
       const path = normalizePath(args.path);
       const overlay = vfsGet(path);
+      if (path === 'config.json') {
+        const res = await fetch(WORKSPACE_URL_PREFIX + path);
+        const disk = res.ok ? await res.text() : null;
+        if (overlay !== null && configJsonUsesDevProxy(overlay)) {
+          vfsRemove(path);
+          if (disk) return { ok: true, result: { path, content: disk } };
+        }
+        if (overlay !== null) return { ok: true, result: { path, content: overlay } };
+        if (disk) return { ok: true, result: { path, content: disk } };
+        throw new Error(`Файл не найден: ${path}`);
+      }
       if (overlay !== null) return { ok: true, result: { path, content: overlay } };
       const res = await fetch(WORKSPACE_URL_PREFIX + path);
       if (!res.ok) throw new Error(`Файл не найден: ${path}`);

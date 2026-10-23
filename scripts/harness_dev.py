@@ -1,13 +1,85 @@
 #!/usr/bin/env python3
-"""Статика для UI (LLM — прямой XHR из браузера на ollama.com)."""
+"""Статика + /dev-llm/* (только localhost: CORS; в config остаётся ollama.com)."""
 
+import json
 import os
 import subprocess
 import sys
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB_PORT = int(os.environ.get("HARNESS_WEB_PORT", "8765"))
+OLLAMA_UPSTREAM = os.environ.get("HARNESS_LLM_UPSTREAM", "https://ollama.com").rstrip("/")
+API_KEY = os.environ.get("OLLAMA_API_KEY", "").strip()
+
+
+class HarnessDevHandler(SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(ROOT), **kwargs)
+
+    def do_POST(self):
+        if self.path.startswith("/dev-llm/"):
+            self._proxy_llm()
+            return
+        self.send_error(405)
+
+    def do_OPTIONS(self):
+        if self.path.startswith("/dev-llm/"):
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", self.headers.get("Origin", "*"))
+            self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept")
+            self.end_headers()
+            return
+        self.send_error(405)
+
+    def _proxy_llm(self):
+        upstream_path = self.path[len("/dev-llm") :]
+        if not upstream_path.startswith("/"):
+            upstream_path = "/" + upstream_path
+        url = OLLAMA_UPSTREAM + upstream_path
+        length = int(self.headers.get("Content-Length", "0"))
+        body = self.rfile.read(length) if length else b""
+        headers = {
+            "Content-Type": self.headers.get("Content-Type", "application/json"),
+            "Accept": "application/json",
+        }
+        auth = self.headers.get("Authorization")
+        if API_KEY:
+            headers["Authorization"] = f"Bearer {API_KEY}"
+        elif auth:
+            headers["Authorization"] = auth
+        req = Request(url, data=body, headers=headers, method="POST")
+        try:
+            with urlopen(req, timeout=300) as resp:
+                data = resp.read()
+                self.send_response(resp.status)
+                self.send_header("Content-Type", resp.headers.get("Content-Type", "application/json"))
+                self.send_header("Access-Control-Allow-Origin", self.headers.get("Origin", "*"))
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+        except HTTPError as e:
+            err = e.read()
+            self.send_response(e.code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", self.headers.get("Origin", "*"))
+            self.end_headers()
+            self.wfile.write(err)
+        except URLError as e:
+            msg = json.dumps({"error": str(e.reason)}).encode("utf-8")
+            self.send_response(502)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(msg)
+
+    def log_message(self, fmt, *args):
+        if args and isinstance(args[0], str) and args[0].startswith("GET /vendor"):
+            return
+        super().log_message(fmt, *args)
 
 
 def main():
@@ -16,12 +88,15 @@ def main():
         cwd=str(ROOT),
         check=False,
     )
-    print(f"Harness dev: http://127.0.0.1:{WEB_PORT}/index.html", flush=True)
-    subprocess.run(
-        [sys.executable, "-m", "http.server", str(WEB_PORT), "--bind", "127.0.0.1"],
-        cwd=str(ROOT),
-        check=False,
+    print(
+        f"Harness dev: http://127.0.0.1:{WEB_PORT}/index.html (CORS relay /dev-llm → ollama.com)",
+        flush=True,
     )
+    server = ThreadingHTTPServer(("127.0.0.1", WEB_PORT), HarnessDevHandler)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == "__main__":
