@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HTTP-заглушка платформы 1С: принимает tool.invoke, исполняет tools/python/stub_1c."""
+"""Устарело для UI: мост только DOM. Скрипт для ручной отладки executor (stdin/HTTP)."""
 
 import json
 import sys

@@ -8,7 +8,7 @@
 
 Интерфейс на русском; адрес сервера и модели — в **Настройках**; чаты сохраняются автоматически, у каждого пункта меню **⋯** (переименовать, архивировать, удалить).
 
-Сейчас UI рассчитан на **llama-server** (`/completion`, стриминг). Подключение к OpenAI/Ollama и бэкенду 1С — следующий шаг.
+**Агент в браузере:** OpenAI-compatible → Ollama Cloud (`gemma4:31b-cloud`), ключ `OLLAMA_API_KEY` только в env, прокси [`scripts/ollama_proxy.py`](scripts/ollama_proxy.py). Инструменты **только через DOM-мост 1С**; в браузере платформу имитирует [`web/js/stub-1c-platform.js`](web/js/stub-1c-platform.js), эталон логики — [`tools/python/stub_1c`](tools/python/stub_1c) (CLI/тесты, не HTTP). Запуск: `python3 scripts/harness_dev.py`. Legacy llama-server: `?legacy=llama`.
 
 ## Внешняя обработка
 

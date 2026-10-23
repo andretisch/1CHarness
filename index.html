@@ -173,11 +173,7 @@
                                 <label for="openAiModel" class="form-label">Модель</label>
                                 <input type="text" class="form-control" id="openAiModel" value="gemma4:31b-cloud">
                             </div>
-                            <div class="mb-3">
-                                <label for="bridgeUrl" class="form-label">Мост 1С (stub / платформа)</label>
-                                <input type="url" class="form-control" id="bridgeUrl" value="http://127.0.0.1:8769/invoke">
-                                <div class="form-text">Инструменты только через мост. В 1С: <code>?backend=1c</code> — DOM-мост; в браузере — Python stub.</div>
-                            </div>
+                            <div class="form-text mb-0">Инструменты — только через DOM-мост 1С (<code>#harness-1c-bridge</code>). В браузере платформу имитирует JS (<code>stub-1c-platform.js</code>); в обработке — <code>?backend=1c</code> и <code>harnessDeliverResponse</code>.</div>
                             <details class="mb-0">
                                 <summary class="small text-body-secondary">Legacy llama-server</summary>
                                 <div class="mt-2">
@@ -244,7 +240,6 @@
             serverUrl: document.getElementById('serverUrl'),
             openAiBaseUrl: document.getElementById('openAiBaseUrl'),
             openAiModel: document.getElementById('openAiModel'),
-            bridgeUrl: document.getElementById('bridgeUrl'),
             chatInput: document.getElementById('chatInput'),
             sendButton: document.getElementById('sendButton'),
             statusBar: document.getElementById('statusBar'),
@@ -391,15 +386,12 @@
         function loadAgentConnectionSettings() {
             const base = localStorage.getItem('harnessOpenAiBase') || 'http://127.0.0.1:8768/v1';
             const model = localStorage.getItem('harnessOpenAiModel') || 'gemma4:31b-cloud';
-            const bridge = localStorage.getItem('harnessBridgeUrl') || 'http://127.0.0.1:8769/invoke';
             if (elements.openAiBaseUrl) elements.openAiBaseUrl.value = base;
             if (elements.openAiModel) elements.openAiModel.value = model;
-            if (elements.bridgeUrl) elements.bridgeUrl.value = bridge;
         }
         function saveAgentConnectionSettings() {
             if (elements.openAiBaseUrl) localStorage.setItem('harnessOpenAiBase', elements.openAiBaseUrl.value.trim());
             if (elements.openAiModel) localStorage.setItem('harnessOpenAiModel', elements.openAiModel.value.trim());
-            if (elements.bridgeUrl) localStorage.setItem('harnessBridgeUrl', elements.bridgeUrl.value.trim());
         }
         function harnessAgentMode() {
             return window.HarnessAgent?.enabled?.() !== false;
@@ -761,7 +753,6 @@
             }
             if (elements.openAiBaseUrl) elements.openAiBaseUrl.addEventListener('change', saveAgentConnectionSettings);
             if (elements.openAiModel) elements.openAiModel.addEventListener('change', saveAgentConnectionSettings);
-            if (elements.bridgeUrl) elements.bridgeUrl.addEventListener('change', saveAgentConnectionSettings);
             elements.serverUrl.addEventListener('input', handleServerUrlInput);
             elements.chatInput.addEventListener('input', () => {
                 updateSendButtonState();

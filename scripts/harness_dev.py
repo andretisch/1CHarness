@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Статика + Ollama proxy + мост 1С (stub) для разработки в браузере."""
+"""Статика + прокси Ollama (ключ в env). Мост 1С — только в браузере / в платформе."""
 
 import os
 import subprocess
@@ -20,12 +20,6 @@ def main():
                 cwd=str(ROOT),
             )
         )
-        procs.append(
-            subprocess.Popen(
-                [sys.executable, str(ROOT / "scripts" / "bridge_1c_stub.py")],
-                cwd=str(ROOT),
-            )
-        )
         time.sleep(0.3)
         procs.append(
             subprocess.Popen(
@@ -34,8 +28,7 @@ def main():
             )
         )
         print(
-            f"Harness dev: http://127.0.0.1:{WEB_PORT}/index.html | "
-            f"Ollama proxy :8768 | bridge stub :8769",
+            f"Harness dev: http://127.0.0.1:{WEB_PORT}/index.html | Ollama proxy :8768",
             flush=True,
         )
         for p in procs:

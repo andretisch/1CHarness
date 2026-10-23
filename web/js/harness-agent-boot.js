@@ -3,10 +3,12 @@ import {
   loadSystemPromptViaBridge,
   getAgentConfig,
 } from './agent-openai.js';
-import { installDomBridgeListener, wireHarnessDeliverResponse, invoke1cTool } from './bridge-1c.js';
+import { installDomBridgeListener, wireHarnessDeliverResponse, invoke1cTool, isReal1CBridge } from './bridge-1c.js';
+import { installStub1CPlatformOnBridge } from './stub-1c-platform.js';
 
 installDomBridgeListener();
 wireHarnessDeliverResponse();
+installStub1CPlatformOnBridge(isReal1CBridge);
 
 let cachedSystemPrompt = null;
 
