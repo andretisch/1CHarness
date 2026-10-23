@@ -8,7 +8,7 @@
 
 Интерфейс на русском; адрес сервера и модели — в **Настройках**; чаты сохраняются автоматически, у каждого пункта меню **⋯** (переименовать, архивировать, удалить).
 
-**Агент в браузере:** OpenAI-compatible → Ollama Cloud (`gemma4:31b-cloud`), ключ `OLLAMA_API_KEY` только в env, прокси [`scripts/ollama_proxy.py`](scripts/ollama_proxy.py). Инструменты **только через DOM-мост 1С**; в браузере платформу имитирует [`web/js/stub-1c-platform.js`](web/js/stub-1c-platform.js), эталон логики — [`tools/python/stub_1c`](tools/python/stub_1c) (CLI/тесты, не HTTP). Запуск: `python3 scripts/harness_dev.py`. Legacy llama-server: `?legacy=llama`.
+**Агент в браузере:** LLM — **прямой XHR** ([`web/js/llm-xhr.js`](web/js/llm-xhr.js)) на настроенный base URL (Ollama Cloud: `https://ollama.com/v1`, модель `gemma4:31b-cloud`, Bearer-ключ в настройках). Инструменты — **DOM-мост 1С** + [`stub-1c-platform.js`](web/js/stub-1c-platform.js). Статика: `python3 scripts/harness_dev.py`. Legacy llama-server: `?legacy=llama`.
 
 ## Внешняя обработка
 

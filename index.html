@@ -165,13 +165,25 @@
                     <div class="tab-content pt-3">
                         <div class="tab-pane fade show active" id="tab-connection" role="tabpanel">
                             <div class="mb-3">
-                                <label for="openAiBaseUrl" class="form-label">OpenAI-compatible API (base URL)</label>
-                                <input type="url" class="form-control" id="openAiBaseUrl" placeholder="http://127.0.0.1:8768/v1" value="http://127.0.0.1:8768/v1">
-                                <div class="form-text">Ollama Cloud: локальный прокси <code>scripts/ollama_proxy.py</code> → <code>https://ollama.com/v1</code> (ключ в <code>OLLAMA_API_KEY</code>).</div>
+                                <label for="openAiBaseUrl" class="form-label">Базовый URL API</label>
+                                <input type="url" class="form-control" id="openAiBaseUrl" placeholder="https://ollama.com/v1" value="https://ollama.com/v1">
+                                <div class="form-text">Прямой XHR, без прокси. Ollama Cloud: <code>https://ollama.com/v1</code> + путь <code>/v1/chat/completions</code> или стиль Ollama <code>/api/chat</code>.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="llmApiStyle" class="form-label">Стиль API</label>
+                                <select class="form-select" id="llmApiStyle">
+                                    <option value="openai" selected>OpenAI-compatible (/v1/chat/completions)</option>
+                                    <option value="ollama">Ollama (/api/chat)</option>
+                                </select>
                             </div>
                             <div class="mb-3">
                                 <label for="openAiModel" class="form-label">Модель</label>
                                 <input type="text" class="form-control" id="openAiModel" value="gemma4:31b-cloud">
+                            </div>
+                            <div class="mb-3">
+                                <label for="llmApiKey" class="form-label">API-ключ (Bearer)</label>
+                                <input type="password" class="form-control" id="llmApiKey" autocomplete="off" placeholder="Ollama Cloud — ключ с ollama.com">
+                                <div class="form-text">Хранится только в localStorage этого браузера. Пусто — без Authorization.</div>
                             </div>
                             <div class="form-text mb-0">Инструменты — только через DOM-мост 1С (<code>#harness-1c-bridge</code>). В браузере платформу имитирует JS (<code>stub-1c-platform.js</code>); в обработке — <code>?backend=1c</code> и <code>harnessDeliverResponse</code>.</div>
                             <details class="mb-0">
@@ -240,6 +252,8 @@
             serverUrl: document.getElementById('serverUrl'),
             openAiBaseUrl: document.getElementById('openAiBaseUrl'),
             openAiModel: document.getElementById('openAiModel'),
+            llmApiStyle: document.getElementById('llmApiStyle'),
+            llmApiKey: document.getElementById('llmApiKey'),
             chatInput: document.getElementById('chatInput'),
             sendButton: document.getElementById('sendButton'),
             statusBar: document.getElementById('statusBar'),
@@ -384,14 +398,29 @@
             setSidebarCollapsed(collapsed);
         }
         function loadAgentConnectionSettings() {
-            const base = localStorage.getItem('harnessOpenAiBase') || 'http://127.0.0.1:8768/v1';
+            const base = localStorage.getItem('harnessLlmApiBase') || localStorage.getItem('harnessOpenAiBase') || 'https://ollama.com/v1';
             const model = localStorage.getItem('harnessOpenAiModel') || 'gemma4:31b-cloud';
+            const style = localStorage.getItem('harnessLlmApiStyle') || 'openai';
             if (elements.openAiBaseUrl) elements.openAiBaseUrl.value = base;
             if (elements.openAiModel) elements.openAiModel.value = model;
+            if (elements.llmApiStyle) elements.llmApiStyle.value = style;
+            if (elements.llmApiKey) elements.llmApiKey.value = localStorage.getItem('harnessLlmApiKey') || '';
+            if (!localStorage.getItem('harnessLlmApiKey') && window.__HARNESS_LLM_API_KEY) {
+                localStorage.setItem('harnessLlmApiKey', window.__HARNESS_LLM_API_KEY);
+                if (elements.llmApiKey) elements.llmApiKey.value = window.__HARNESS_LLM_API_KEY;
+            }
         }
         function saveAgentConnectionSettings() {
-            if (elements.openAiBaseUrl) localStorage.setItem('harnessOpenAiBase', elements.openAiBaseUrl.value.trim());
+            if (elements.openAiBaseUrl) {
+                const v = elements.openAiBaseUrl.value.trim();
+                localStorage.setItem('harnessLlmApiBase', v);
+                localStorage.setItem('harnessOpenAiBase', v);
+            }
             if (elements.openAiModel) localStorage.setItem('harnessOpenAiModel', elements.openAiModel.value.trim());
+            if (elements.llmApiStyle) localStorage.setItem('harnessLlmApiStyle', elements.llmApiStyle.value);
+            if (elements.llmApiKey && elements.llmApiKey.value) {
+                localStorage.setItem('harnessLlmApiKey', elements.llmApiKey.value);
+            }
         }
         function harnessAgentMode() {
             return window.HarnessAgent?.enabled?.() !== false;
@@ -753,6 +782,8 @@
             }
             if (elements.openAiBaseUrl) elements.openAiBaseUrl.addEventListener('change', saveAgentConnectionSettings);
             if (elements.openAiModel) elements.openAiModel.addEventListener('change', saveAgentConnectionSettings);
+            if (elements.llmApiStyle) elements.llmApiStyle.addEventListener('change', saveAgentConnectionSettings);
+            if (elements.llmApiKey) elements.llmApiKey.addEventListener('change', saveAgentConnectionSettings);
             elements.serverUrl.addEventListener('input', handleServerUrlInput);
             elements.chatInput.addEventListener('input', () => {
                 updateSendButtonState();

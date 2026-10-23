@@ -1,17 +1,20 @@
 import { HARNESS_OPENAI_TOOLS } from './tools-openai.js';
 import { invoke1cTool } from './bridge-1c.js';
+import {
+  getLlmSettings,
+  postLlmViaXhr,
+  extractAssistantMessage,
+} from './llm-xhr.js';
 
-const DEFAULTS = {
-  baseUrl: 'http://127.0.0.1:8768/v1',
-  model: 'gemma4:31b-cloud',
-  maxToolSteps: 8,
-};
+const MAX_TOOL_STEPS = 8;
 
 export function getAgentConfig() {
+  const llm = getLlmSettings();
   return {
-    baseUrl: (localStorage.getItem('harnessOpenAiBase') || DEFAULTS.baseUrl).replace(/\/$/, ''),
-    model: localStorage.getItem('harnessOpenAiModel') || DEFAULTS.model,
-    maxToolSteps: DEFAULTS.maxToolSteps,
+    model: llm.model,
+    apiBase: llm.apiBase,
+    apiStyle: llm.apiStyle,
+    maxToolSteps: MAX_TOOL_STEPS,
   };
 }
 
@@ -21,24 +24,16 @@ function parseToolCalls(message) {
   return [];
 }
 
-async function chatCompletion(baseUrl, body, signal) {
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal,
-  });
-  const text = await res.text();
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error(`LLM: неверный JSON (${res.status})`);
-  }
-  if (!res.ok) {
-    throw new Error(data.error?.message || data.error || `LLM HTTP ${res.status}`);
-  }
-  return data;
+async function chatCompletion(body, signal) {
+  const settings = getLlmSettings();
+  const payload =
+    settings.apiStyle === 'ollama'
+      ? { model: body.model, messages: body.messages, stream: false, tools: body.tools }
+      : body;
+  const data = await postLlmViaXhr(payload, { signal });
+  const msg = extractAssistantMessage(data, settings.apiStyle);
+  if (!msg) throw new Error('LLM: пустой ответ');
+  return { raw: data, message: msg };
 }
 
 async function executeToolCall(tc) {
@@ -52,13 +47,6 @@ async function executeToolCall(tc) {
   return invoke1cTool(fn.name, args);
 }
 
-/**
- * @param {object} opts
- * @param {Array} opts.messages OpenAI messages (без финального assistant placeholder)
- * @param {AbortSignal} [opts.signal]
- * @param {(text: string) => void} [opts.onAssistantDelta] — только финальный текст (без stream tools)
- * @param {(info: object) => void} [opts.onToolEvent]
- */
 export async function runAgentTurn(opts) {
   const cfg = getAgentConfig();
   const messages = [...opts.messages];
@@ -74,10 +62,7 @@ export async function runAgentTurn(opts) {
       stream: false,
       temperature: opts.temperature ?? 0.4,
     };
-    const data = await chatCompletion(cfg.baseUrl, body, signal);
-    const choice = data.choices?.[0];
-    const msg = choice?.message;
-    if (!msg) throw new Error('LLM: пустой ответ');
+    const { message: msg } = await chatCompletion(body, signal);
 
     const toolCalls = parseToolCalls(msg);
     if (toolCalls.length) {
