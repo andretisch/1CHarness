@@ -69,10 +69,13 @@ function safeCalc(expression) {
 }
 
 function chartSpec(args) {
-  const type = String(args.type || '').trim();
-  if (!['bar', 'line', 'hbar'].includes(type)) throw new Error('type: bar, line или hbar');
+  const raw = String(args.type || 'bar').trim().toLowerCase();
+  let type = 'bar';
+  if (raw.includes('hbar') || raw.includes('horizontal') || raw.includes('гориз')) type = 'hbar';
+  else if (raw.includes('line') || raw.includes('лин')) type = 'line';
   const labels = Array.isArray(args.labels) ? args.labels.map(String) : [];
-  const data = Array.isArray(args.data) ? args.data.map(Number) : [];
+  const series = Array.isArray(args.data) ? args.data : args.values;
+  const data = Array.isArray(series) ? series.map(Number) : [];
   if (!labels.length || labels.length !== data.length || data.some((n) => !Number.isFinite(n))) {
     throw new Error('labels и data — массивы одной длины из чисел');
   }

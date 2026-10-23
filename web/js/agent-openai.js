@@ -92,7 +92,7 @@ export async function runAgentTurn(opts) {
         if (name === 'delegate_task' && out.ok && !(out.result?.rows || []).length) {
           delegateEmpty += 1;
         }
-        opts.onToolEvent?.({ phase: 'end', name, id: tc.id, ok: out.ok, chart: out.result?.chart });
+        opts.onToolEvent?.({ phase: 'end', name, id: tc.id, ok: out.ok, error: out.error, chart: out.result?.chart });
         messages.push({
           role: 'tool',
           tool_call_id: tc.id,

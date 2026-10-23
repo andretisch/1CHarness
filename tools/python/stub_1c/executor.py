@@ -105,16 +105,19 @@ def _calc(expression: str) -> dict:
 
 
 def _chart(args: dict) -> dict:
-    kind = str(args.get("type") or "").strip()
-    if kind not in {"bar", "line", "hbar"}:
-        raise ValueError("type: bar, line или hbar")
+    raw = str(args.get("type") or "bar").strip().lower()
+    kind = "bar"
+    if any(token in raw for token in ("hbar", "horizontal", "гориз")):
+        kind = "hbar"
+    elif any(token in raw for token in ("line", "лин")):
+        kind = "line"
     labels = [str(x) for x in (args.get("labels") or [])]
-    data = args.get("data") or []
-    if not labels or len(labels) != len(data):
+    series = args.get("data")
+    if series is None:
+        series = args.get("values") or []
+    if not labels or len(labels) != len(series):
         raise ValueError("labels и data — массивы одной длины")
-    numbers = []
-    for item in data:
-        numbers.append(float(item))
+    numbers = [float(item) for item in series]
     return {
         "type": kind,
         "title": str(args.get("title") or ""),

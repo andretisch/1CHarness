@@ -1005,6 +1005,7 @@
             const modelMessage = { role: 'model', content: '', id: `msg-${messageCounter++}` };
             chatHistory.push(modelMessage);
             renderChatHistory();
+            const toolNotes = [];
             try {
                 const temperature = parseFloat(elements.temperature.value);
                 const result = await window.HarnessAgent.runHarnessAgentTurn({
@@ -1013,10 +1014,16 @@
                     temperature: Number.isFinite(temperature) ? temperature : 0.4,
                     onToolEvent(ev) {
                         if (ev.phase === 'start') showLoading(true, `1С: ${ev.name}…`);
+                        if (ev.phase === 'end' && ev.ok === false && ev.error) {
+                            toolNotes.push(`**${ev.name}:** ${ev.error}`);
+                        }
                     },
                 });
                 if (currentAbortController?.signal.aborted) throw new DOMException('Aborted', 'AbortError');
                 let content = result.content || '_(пустой ответ)_';
+                if (toolNotes.length && /^(error|ошибка)\.?$/i.test(content.trim())) {
+                    content = toolNotes.join('\n\n');
+                }
                 for (const spec of result.charts || []) {
                     const payload = JSON.stringify(spec).replace(/'/g, '&#39;');
                     const title = spec.title ? `<figcaption>${escapeHtml(spec.title)}</figcaption>` : '';
