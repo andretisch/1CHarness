@@ -4192,7 +4192,7 @@ const HARNESS_OPENAI_TOOLS = [
     labels: { type: 'array', items: { type: 'string' } },
     data: { type: 'array', items: { type: 'number' }, description: 'Значения одного ряда' },
   }, ['type', 'labels', 'data']),
-  fn('run_query', 'Язык запросов 1С. В браузере без сеанса ИБ недоступен.', {
+  fn('run_query', 'Язык запросов 1С к базе сеанса: Справочник.Номенклатура, Документ.РасходнаяНакладная, РегистрСведений.ЦеныНоменклатуры, РегистрНакопления.Продажи.', {
     query: str('Текст запроса'),
     params: { type: 'object', description: 'Параметры; ссылки как {type, uuid}' },
     limit: num('Лимит строк'),
@@ -4534,7 +4534,14 @@ function wireHarnessDeliverResponse() {
   const prev = window.harnessDeliverResponse;
   window.harnessDeliverResponse = function (payload) {
     const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
-    document.dispatchEvent(new CustomEvent('harness-1c-response', { detail: data }));
+    if (data && data.id && bridgeWaiters.has(data.id)) {
+      const waiter = bridgeWaiters.get(data.id);
+      bridgeWaiters.delete(data.id);
+      waiter.resolve(data);
+    }
+    try {
+      document.dispatchEvent(new CustomEvent('harness-1c-response', { detail: data }));
+    } catch (_) { /* поле HTML 1С не всегда доставляет detail */ }
     if (typeof prev === 'function') prev(payload);
   };
 }
@@ -5205,12 +5212,14 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             } catch (e) { /* not in 1C host */ }
             document.dispatchEvent(new CustomEvent('harness-1c-request', { detail: envelope }));
         }
+        const deliverToToolWaiters = window.harnessDeliverResponse;
         window.harnessDeliverResponse = function(payload) {
             const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
             if (harnessHostResponseResolver) {
                 harnessHostResponseResolver(data);
                 harnessHostResponseResolver = null;
             }
+            if (typeof deliverToToolWaiters === 'function') deliverToToolWaiters(payload);
         };
         function waitHarnessHostResponse(timeoutMs) {
             return new Promise((resolve) => {
@@ -5591,10 +5600,17 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             });
         }
         function setupEventListeners() {
-            elements.sendButton.addEventListener('click', () => {
+            let sendActivateLock = false;
+            const activateSend = (event) => {
+                if (event && event.button != null && event.button !== 0) return;
+                if (sendActivateLock) return;
+                sendActivateLock = true;
+                setTimeout(() => { sendActivateLock = false; }, 400);
                 if (currentAbortController) handleStopGeneration();
                 else handleSendPrompt();
-            });
+            };
+            elements.sendButton.addEventListener('mousedown', activateSend);
+            elements.sendButton.addEventListener('click', activateSend);
             elements.newChatBtn.addEventListener('click', () => startNewSession());
             if (elements.paletteSelect) {
                 elements.paletteSelect.addEventListener('change', () => {
@@ -5631,10 +5647,14 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             }
             setupHeaderMenu();
             if (elements.headerSettingsBtn) {
-                elements.headerSettingsBtn.addEventListener('click', () => {
+                const openSettings = (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
                     closeHeaderMenu();
                     bootstrap.Modal.getOrCreateInstance(elements.settingsModal).show();
-                });
+                };
+                elements.headerSettingsBtn.addEventListener('mousedown', openSettings);
+                elements.headerSettingsBtn.addEventListener('click', openSettings);
             }
             if (elements.contextWindow) {
                 elements.contextWindow.addEventListener('change', () => {
@@ -5653,7 +5673,8 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
                 updateContextMeter();
             });
             elements.chatInput.addEventListener('keydown', (event) => {
-                if (event.key !== 'Enter' || event.isComposing) return;
+                const enter = event.key === 'Enter' || event.keyCode === 13;
+                if (!enter || event.isComposing) return;
                 if (event.shiftKey) return;
                 event.preventDefault();
                 if (!elements.sendButton.disabled && !currentAbortController) {
@@ -5716,13 +5737,25 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
         }
         function setupHeaderMenu() {
             if (!elements.headerMenuBtn || !elements.headerMenuDropdown) return;
-            elements.headerMenuBtn.addEventListener('click', (event) => {
+            let openedAt = 0;
+            const toggleHeaderMenu = (event) => {
+                event.preventDefault();
                 event.stopPropagation();
                 const open = elements.headerMenuDropdown.hidden;
                 elements.headerMenuDropdown.hidden = !open;
                 elements.headerMenuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                openedAt = Date.now();
+            };
+            elements.headerMenuBtn.addEventListener('mousedown', toggleHeaderMenu);
+            elements.headerMenuBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
             });
-            document.addEventListener('click', () => closeHeaderMenu());
+            document.addEventListener('click', (event) => {
+                if (Date.now() - openedAt < 400) return;
+                if (event.target && event.target.closest && event.target.closest('.kb-menu-wrap')) return;
+                closeHeaderMenu();
+            });
         }
         function closeHeaderMenu() {
             if (!elements.headerMenuDropdown) return;
