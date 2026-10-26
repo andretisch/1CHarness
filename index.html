@@ -5454,6 +5454,9 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             showStatus(`Агент: ${cfg?.model || 'gemma4:31b-cloud'} (OpenAI API), инструменты → мост 1С.`, 'info');
             const demoMode = isDemoMode();
             if (demoMode) seedDemoSessionsIfNeeded();
+            try {
+                await restoreSessionsFromWorkspace();
+            } catch (_) { /* список диалогов останется из localStorage */ }
             populateSessions();
             if (demoMode) {
                 const sessions = getSessionIndex();
@@ -6312,6 +6315,28 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
                 const index = JSON.parse(localStorage.getItem(SESSION_INDEX_KEY));
                 return Array.isArray(index) ? index : [];
             } catch { return []; }
+        }
+        async function restoreSessionsFromWorkspace() {
+            if (!window.HarnessAgent?.invoke1cTool || !window.HarnessAgent?.loadSessionJsonViaBridge) return;
+            const listed = await window.HarnessAgent.invoke1cTool('fs_list', { path: 'sessions' });
+            if (!listed.ok) return;
+            const names = (listed.result?.entries || [])
+                .map((entry) => (typeof entry === 'string' ? entry : entry?.name))
+                .filter((name) => name && String(name).endsWith('.json'));
+            const sessions = getSessionIndex();
+            for (const name of names) {
+                const id = String(name).replace(/\.json$/, '');
+                if (sessions.some((session) => session.id === id)) continue;
+                const payload = await window.HarnessAgent.loadSessionJsonViaBridge(id);
+                if (!payload || !Array.isArray(payload.messages) || !payload.messages.length) continue;
+                localStorage.setItem(`${SESSION_DATA_PREFIX}${id}`, JSON.stringify(payload.messages));
+                sessions.push({
+                    id,
+                    name: payload.name || id,
+                    updatedAt: payload.updatedAt || 0,
+                });
+            }
+            saveSessionIndex(sessions);
         }
         function saveSessionIndex(index) {
             localStorage.setItem(SESSION_INDEX_KEY, JSON.stringify(index));

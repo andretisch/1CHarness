@@ -50,6 +50,7 @@
 - `inspect_metadata` — реквизиты, табличные части, измерения и ресурсы
 - `read_object`, `make_navlink` — карточка и навигационная ссылка по `{type, uuid}`
 - `sketch_query`, `delegate_task` — эскиз запроса и выборка в `workspace/data`
-- `report_describe`, `report_run`, `report_compose` — отчётов в этой конфигурации нет, `report_compose` собирает таблицу запросом
+- `report_describe`, `report_run`, `report_compose` — отчёт `ПродажиТоваров` (синоним «Продажи») по оборотам регистра Продажи; `report_run` возвращает строки и сумму
 - `open_draft` — форма нового объекта без записи
-- `fs_read`, `fs_write`, `fs_list` — файлы рабочей области; `fs_write` создаёт недостающие папки по пути
+- `fs_read`, `fs_write`, `fs_list`, `fs_search` — файлы рабочей области; `fs_write` создаёт недостающие папки по пути
+- `session_now`, `calc`, `find_in_chat`, `find_skill`, `draw_chart` — дата сеанса, арифметика, поиск по диалогам и инструкциям, график в ответе

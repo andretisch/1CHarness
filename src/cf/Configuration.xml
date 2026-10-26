@@ -254,6 +254,7 @@
 			<Document>РасходнаяНакладная</Document>
 			<InformationRegister>ЦеныНоменклатуры</InformationRegister>
 			<AccumulationRegister>Продажи</AccumulationRegister>
+			<Report>ПродажиТоваров</Report>
 		</ChildObjects>
 	</Configuration>
 </MetaDataObject>
