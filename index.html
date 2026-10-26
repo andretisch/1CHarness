@@ -2774,6 +2774,11 @@ code.hljs {
                                 <input type="password" class="form-control" id="llmApiKey" autocomplete="off" placeholder="Ollama Cloud — ключ с ollama.com">
                                 <div class="form-text">Файл <code>config.json</code> в рабочей области агента (через мост 1С). В dev ключ может подставиться из <code>OLLAMA_API_KEY</code>.</div>
                             </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="anonymizeBeforeLlm" checked>
+                                <label class="form-check-label" for="anonymizeBeforeLlm">Анонимизировать перед отправкой в LLM</label>
+                                <div class="form-text">ИНН, телефон, почта и названия организаций заменяются метками. В ответе метки снова становятся исходными значениями. Фильтр стоит перед запросом к любому провайдеру.</div>
+                            </div>
                             <div class="form-text mb-0">Инструменты — только через DOM-мост 1С (<code>#harness-1c-bridge</code>). Страница одна: в браузере платформу имитирует встроенный код; в обработке — <code>?backend=1c</code> и <code>harnessDeliverResponse</code>.</div>
                         </div>
                         <div class="tab-pane fade" id="tab-generation" role="tabpanel">
@@ -4555,6 +4560,7 @@ const DEFAULT_CONFIG = {
     apiStyle: 'openai',
     model: 'gemma4:31b-cloud',
     apiKey: '',
+    anonymize: true,
   },
   generation: {
     temperature: 0.4,
@@ -4711,6 +4717,158 @@ function applyLlmAuthHeaders(xhr, apiKey) {
   }
 }
 
+function anonymizeEnabled() {
+  return getConnectionSettings().anonymize !== false;
+}
+
+function createAnonymizerVault() {
+  return { byValue: new Map(), tokens: new Map(), types: [] };
+}
+
+const ANON_TYPE_LABELS = {
+  EMAIL: 'почта',
+  PHONE: 'телефон',
+  INN: 'ИНН',
+  ORG: 'организация',
+};
+
+function anonymizerToken(vault, type, value) {
+  const key = `${type}\0${value}`;
+  const existing = vault.byValue.get(key);
+  if (existing) return existing;
+  let n = 0;
+  for (const item of vault.byValue.keys()) {
+    if (item.startsWith(`${type}\0`)) n += 1;
+  }
+  const token = `{{${type}_${n + 1}}}`;
+  vault.byValue.set(key, token);
+  vault.tokens.set(token, value);
+  if (!vault.types.includes(type)) vault.types.push(type);
+  return token;
+}
+
+function anonymizerLabels(vault) {
+  if (!vault) return [];
+  return vault.types.map((type) => ANON_TYPE_LABELS[type] || type);
+}
+
+function innChecksumOk(digits) {
+  const d = digits.split('').map((ch) => Number(ch));
+  const ctrl = (coefs) => (coefs.reduce((sum, coef, i) => sum + coef * d[i], 0) % 11) % 10;
+  if (d.length === 10) return ctrl([2, 4, 10, 3, 5, 9, 4, 6, 8]) === d[9];
+  if (d.length === 12) {
+    return ctrl([7, 2, 4, 10, 3, 5, 9, 4, 6, 8]) === d[10]
+      && ctrl([3, 7, 2, 4, 10, 3, 5, 9, 4, 6, 8]) === d[11];
+  }
+  return false;
+}
+
+function digitBounded(whole, start, length) {
+  if (start > 0 && /\d/.test(whole[start - 1])) return false;
+  const end = start + length;
+  if (end < whole.length && /\d/.test(whole[end])) return false;
+  return true;
+}
+
+function maskEmails(text, vault) {
+  return text.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (match) => anonymizerToken(vault, 'EMAIL', match));
+}
+
+function maskPhones(text, vault) {
+  return text.replace(/(?:\+\d{1,3}|8)(?:[\s\-()]*\d){10,14}/g, (match, offset, whole) => {
+    if (!digitBounded(whole, offset, match.length)) return match;
+    return anonymizerToken(vault, 'PHONE', match);
+  });
+}
+
+function maskLabeledInn(text, vault) {
+  return text.replace(/ИНН(?:\s|[=:№"'«»])*(\d{10}(?:\d{2})?)(?!\d)/gi, (match, digits) => {
+    const token = anonymizerToken(vault, 'INN', digits);
+    return match.replace(digits, token);
+  });
+}
+
+function maskOrgs(text, vault) {
+  return text.replace(
+    /(^|[^\p{L}\p{N}_])((?:ООО|ОАО|ЗАО|ПАО|АО|ИП)\s+(?:«[^»]{1,80}»|"[^"]{1,80}"|[А-ЯЁA-Z][А-Яа-яЁёA-Za-z0-9\-]{0,50}))/gu,
+    (match, prefix, org) => prefix + anonymizerToken(vault, 'ORG', org),
+  );
+}
+
+function maskBareInn(text, vault) {
+  return text.replace(/\d{12}|\d{10}/g, (match, offset, whole) => {
+    if (!digitBounded(whole, offset, match.length)) return match;
+    if (!innChecksumOk(match)) return match;
+    return anonymizerToken(vault, 'INN', match);
+  });
+}
+
+function maskKnownSecrets(text, vault) {
+  let out = text;
+  const items = [...vault.byValue.entries()].sort((a, b) => b[0].length - a[0].length);
+  for (const [key, token] of items) {
+    const value = key.slice(key.indexOf('\0') + 1);
+    if (!value || value.length < 6 || !out.includes(value)) continue;
+    out = out.split(value).join(token);
+  }
+  return out;
+}
+
+function anonymizeText(text, vault) {
+  if (!vault || typeof text !== 'string' || !text) return text;
+  let out = maskEmails(text, vault);
+  out = maskPhones(out, vault);
+  out = maskLabeledInn(out, vault);
+  out = maskOrgs(out, vault);
+  out = maskBareInn(out, vault);
+  out = maskKnownSecrets(out, vault);
+  return out;
+}
+
+function deanonymizeText(text, vault) {
+  if (!vault || typeof text !== 'string' || !text) return text;
+  const tokens = [...vault.tokens.keys()].sort((a, b) => b.length - a.length);
+  let out = text;
+  for (const token of tokens) {
+    if (out.includes(token)) out = out.split(token).join(vault.tokens.get(token));
+  }
+  return out;
+}
+
+function anonymizeLlmPayload(payload, vault) {
+  const copy = JSON.parse(JSON.stringify(payload));
+  const messages = Array.isArray(copy.messages) ? copy.messages : [];
+  for (const message of messages) {
+    if (typeof message.content === 'string') message.content = anonymizeText(message.content, vault);
+    if (Array.isArray(message.tool_calls)) {
+      for (const call of message.tool_calls) {
+        const fn = call && call.function;
+        if (fn && typeof fn.arguments === 'string') fn.arguments = anonymizeText(fn.arguments, vault);
+      }
+    }
+  }
+  const note = 'Персональные данные во входящих сообщениях заменены метками. Повторяй метки дословно и не подставляй вместо них выдуманные значения.';
+  const system = messages.find((message) => message && message.role === 'system' && typeof message.content === 'string');
+  if (system) system.content += `\n\n${note}`;
+  else messages.unshift({ role: 'system', content: note });
+  copy.messages = messages;
+  return copy;
+}
+
+function deanonymizeLlmMessage(message, vault) {
+  if (!message || !vault) return message;
+  const out = { ...message };
+  if (typeof out.content === 'string') out.content = deanonymizeText(out.content, vault);
+  if (Array.isArray(out.tool_calls)) {
+    out.tool_calls = out.tool_calls.map((call) => {
+      const fn = { ...(call.function || {}) };
+      if (typeof fn.arguments === 'string') fn.arguments = deanonymizeText(fn.arguments, vault);
+      return { ...call, function: fn };
+    });
+  }
+  return out;
+}
+
 /**
  * @returns {Promise<object>} parsed JSON body
  */
@@ -4816,15 +4974,17 @@ function parseToolCalls(message) {
   return [];
 }
 
-async function chatCompletion(body, signal) {
+async function chatCompletion(body, signal, vault) {
   const settings = getLlmSettings();
-  const payload =
+  let payload =
     settings.apiStyle === 'ollama'
       ? { model: body.model, messages: body.messages, stream: false, tools: body.tools }
       : body;
+  if (vault) payload = anonymizeLlmPayload(payload, vault);
   const data = await postLlmViaXhr(payload, { signal });
-  const msg = extractAssistantMessage(data, settings.apiStyle);
+  let msg = extractAssistantMessage(data, settings.apiStyle);
   if (!msg) throw new Error('LLM: пустой ответ');
+  if (vault) msg = deanonymizeLlmMessage(msg, vault);
   return { raw: data, message: msg };
 }
 
@@ -4847,6 +5007,7 @@ async function runAgentTurn(opts) {
   const failStreak = new Map();
   let delegateEmpty = 0;
   const charts = [];
+  const vault = anonymizeEnabled() ? createAnonymizerVault() : null;
 
   while (steps < cfg.maxToolSteps) {
     steps += 1;
@@ -4857,7 +5018,7 @@ async function runAgentTurn(opts) {
       stream: false,
       temperature: opts.temperature ?? 0.4,
     };
-    const { message: msg } = await chatCompletion(body, signal);
+    const { message: msg } = await chatCompletion(body, signal, vault);
 
     const toolCalls = parseToolCalls(msg);
     if (toolCalls.length) {
@@ -4896,7 +5057,7 @@ async function runAgentTurn(opts) {
           if (streak >= 3) {
             const content = `Остановлено: инструмент ${name} трижды завершился ошибкой.\n\n${out.error || ''}`;
             opts.onAssistantDelta?.(content);
-            return { content, messages, charts };
+            return { content, messages, charts, masked: anonymizerLabels(vault) };
           }
         } else {
           failStreak.set(name, 0);
@@ -4907,7 +5068,7 @@ async function runAgentTurn(opts) {
 
     const content = msg.content || '';
     opts.onAssistantDelta?.(content);
-    return { content, messages: [...messages, { role: 'assistant', content }], charts };
+    return { content, messages: [...messages, { role: 'assistant', content }], charts, masked: anonymizerLabels(vault) };
   }
 
   throw new Error('Превышен лимит шагов инструментов');
@@ -5155,6 +5316,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             openAiModel: document.getElementById('openAiModel'),
             llmApiStyle: document.getElementById('llmApiStyle'),
             llmApiKey: document.getElementById('llmApiKey'),
+            anonymizeBeforeLlm: document.getElementById('anonymizeBeforeLlm'),
             chatInput: document.getElementById('chatInput'),
             sendButton: document.getElementById('sendButton'),
             statusBar: document.getElementById('statusBar'),
@@ -5291,6 +5453,8 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             if (elements.openAiModel) elements.openAiModel.value = c.model || 'gemma4:31b-cloud';
             if (elements.llmApiStyle) elements.llmApiStyle.value = c.apiStyle || 'openai';
             if (elements.llmApiKey) elements.llmApiKey.value = c.apiKey ? '••••••••' : '';
+            if (elements.anonymizeBeforeLlm) elements.anonymizeBeforeLlm.checked = c.anonymize !== false;
+            updateComposeContext();
         }
         async function saveAgentConnectionSettings() {
             if (!harnessAgentMode() || !window.HarnessAgent?.updateConnectionSettings) return;
@@ -5301,8 +5465,10 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             };
             const keyInput = elements.llmApiKey?.value?.trim();
             if (keyInput && keyInput !== '••••••••') patch.apiKey = keyInput;
+            if (elements.anonymizeBeforeLlm) patch.anonymize = elements.anonymizeBeforeLlm.checked;
             await window.HarnessAgent.updateConnectionSettings(patch);
             if (elements.llmApiKey && patch.apiKey) elements.llmApiKey.value = '••••••••';
+            updateComposeContext();
         }
         function harnessAgentMode() {
             return window.HarnessAgent?.enabled?.() !== false;
@@ -5667,6 +5833,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             if (elements.openAiModel) elements.openAiModel.addEventListener('change', saveAgentConnectionSettings);
             if (elements.llmApiStyle) elements.llmApiStyle.addEventListener('change', saveAgentConnectionSettings);
             if (elements.llmApiKey) elements.llmApiKey.addEventListener('change', saveAgentConnectionSettings);
+            if (elements.anonymizeBeforeLlm) elements.anonymizeBeforeLlm.addEventListener('change', saveAgentConnectionSettings);
             elements.chatInput.addEventListener('input', () => {
                 updateSendButtonState();
                 autoResizeTextarea(elements.chatInput);
@@ -5846,13 +6013,14 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
         }
         function updateComposeContext() {
             if (!elements.composeContext) return;
-            if (!currentSessionId) {
-                elements.composeContext.textContent = chatHistory.length ? 'Черновик' : '1СХарнесс';
-                updateContextMeter();
-                return;
+            const anon = window.HarnessAgent?.getConnectionSettings?.().anonymize !== false;
+            let base = '1СХарнесс';
+            if (!currentSessionId) base = chatHistory.length ? 'Черновик' : '1СХарнесс';
+            else {
+                const session = getSessionIndex().find(s => s.id === currentSessionId);
+                base = session ? session.name : '1СХарнесс';
             }
-            const session = getSessionIndex().find(s => s.id === currentSessionId);
-            elements.composeContext.textContent = session ? session.name : '1СХарнесс';
+            elements.composeContext.textContent = anon ? `${base} · анонимизация` : base;
             updateContextMeter();
         }
         function handleRemoveStagedFile(event) {
@@ -5967,6 +6135,9 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
                 let content = result.content || '_(пустой ответ)_';
                 if (toolNotes.length && /^(error|ошибка)\.?$/i.test(content.trim())) {
                     content = toolNotes.join('\n\n');
+                }
+                if (result.masked && result.masked.length) {
+                    content += `\n\n_Перед отправкой в модель скрыто: ${result.masked.join(', ')}. В тексте ответа метки раскрыты._`;
                 }
                 for (const spec of result.charts || []) {
                     const payload = JSON.stringify(spec).replace(/'/g, '&#39;');

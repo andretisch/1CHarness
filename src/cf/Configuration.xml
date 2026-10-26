@@ -32,11 +32,11 @@
 			</xr:ContainedObject>
 		</InternalInfo>
 		<Properties>
-			<Name>ХарнессУНФ</Name>
+			<Name>ХарнессТест</Name>
 			<Synonym>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
-					<v8:content>Харнесс, срез УНФ</v8:content>
+					<v8:content>Харнесс тест</v8:content>
 				</v8:item>
 			</Synonym>
 			<Comment/>
