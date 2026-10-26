@@ -4976,16 +4976,33 @@ function parseToolCalls(message) {
 
 async function chatCompletion(body, signal, vault) {
   const settings = getLlmSettings();
-  let payload =
-    settings.apiStyle === 'ollama'
-      ? { model: body.model, messages: body.messages, stream: false, tools: body.tools }
-      : body;
+  const ollamaPayload = { model: body.model, messages: body.messages, stream: false };
+  if (body.tools) ollamaPayload.tools = body.tools;
+  let payload = settings.apiStyle === 'ollama' ? ollamaPayload : body;
   if (vault) payload = anonymizeLlmPayload(payload, vault);
   const data = await postLlmViaXhr(payload, { signal });
   let msg = extractAssistantMessage(data, settings.apiStyle);
   if (!msg) throw new Error('LLM: пустой ответ');
   if (vault) msg = deanonymizeLlmMessage(msg, vault);
   return { raw: data, message: msg };
+}
+
+async function explainToolFailure(cfg, messages, signal, vault, blocked) {
+  messages.push({
+    role: 'user',
+    content: `Инструмент ${blocked.name} вернул ошибку. Инструменты больше не вызывай. Объясни пользователю своими словами, что пошло не так, и приведи текст ошибки.\n\n${blocked.error}`,
+  });
+  try {
+    const { message: explained } = await chatCompletion({
+      model: cfg.model,
+      messages,
+      stream: false,
+      temperature: 0.2,
+    }, signal, vault);
+    const content = String(explained.content || '').trim();
+    if (content) return content;
+  } catch (_) { /* ниже — сама ошибка, если модель не ответила */ }
+  return `Инструмент ${blocked.name} завершился ошибкой.\n\n${blocked.error}`;
 }
 
 async function executeToolCall(tc) {
@@ -5008,6 +5025,7 @@ async function runAgentTurn(opts) {
   let delegateEmpty = 0;
   const charts = [];
   const vault = anonymizeEnabled() ? createAnonymizerVault() : null;
+  let blockedTool = null;
 
   while (steps < cfg.maxToolSteps) {
     steps += 1;
@@ -5049,19 +5067,25 @@ async function runAgentTurn(opts) {
         messages.push({
           role: 'tool',
           tool_call_id: tc.id,
-          content: JSON.stringify(out.ok ? out.result : { error: out.error }, null, 0),
+          content: JSON.stringify(out.ok ? out.result : {
+            error: out.error,
+            hint: 'Инструмент вернул ошибку. Разбери её и объясни пользователю. Тот же вызов не повторяй.',
+          }, null, 0),
         });
         if (!out.ok) {
           const streak = (failStreak.get(name) || 0) + 1;
           failStreak.set(name, streak);
           if (streak >= 3) {
-            const content = `Остановлено: инструмент ${name} трижды завершился ошибкой.\n\n${out.error || ''}`;
-            opts.onAssistantDelta?.(content);
-            return { content, messages, charts, masked: anonymizerLabels(vault) };
+            blockedTool = { name, error: out.error || '' };
           }
         } else {
           failStreak.set(name, 0);
         }
+      }
+      if (blockedTool) {
+        const content = await explainToolFailure(cfg, messages, signal, vault, blockedTool);
+        opts.onAssistantDelta?.(content);
+        return { content, messages: [...messages, { role: 'assistant', content }], charts, masked: anonymizerLabels(vault) };
       }
       continue;
     }
