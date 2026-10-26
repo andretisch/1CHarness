@@ -1,38 +1,51 @@
 # 1СХарнесс
 
-Полноценная обвязка ИИ-агента на платформе 1С.
+Чат-агент для 1С. Страница собрана по образцу [крабобот](https://github.com/andretisch/krabobot): шапка, список диалогов, пузыри ответов и подложка с логотипом. Строка ввода — капсула. В меню две палитры, «Крабобот (синий)» и «1С Такси (шахматка)»; подложка с крабом остаётся на обеих.
 
-## UI (старт)
+## Что в репозитории
 
-В корне лежит [`index.html`](index.html) — один HTML-файл чата на базе [openconstruct/llamahtml](https://github.com/openconstruct/llamahtml). Оформление (цвета, подложка чата) — как у [крабобот](https://github.com/andretisch/krabobot/tree/main/krabobot/web/static); **строка ввода** — компактная капсула как раньше. Зависимости (Bootstrap, marked, highlight.js) в [`vendor/`](vendor/); шрифт Nunito подгружается с Google Fonts (в 1С без сети останется system-ui). Открывается в браузере или в **поле HTML документа** (Chromium, 8.3).
+- [`index.html`](index.html) — один файл чата. Стили, скрипты и логотип уже внутри, страница открывается с диска.
+- [`epf/1CHarness.epf`](epf/1CHarness.epf) — внешняя обработка, она тоже в git. В поле HTML та же страница.
+- [`src/CHarness1C`](src/CHarness1C) — исходники обработки.
+- [`src/cf`](src/cf) — конфигурация «Харнесс, срез УНФ»: справочник `Номенклатура`, документ `РасходнаяНакладная`, регистр сведений `ЦеныНоменклатуры`, регистр накопления `Продажи`.
+- [`workspace`](workspace) — `config.json`, агент `agents/default.md`, навык `skills/query.md`. Сессии (`workspace/sessions/*.json`) и файловая база `bases/` в git не входят.
 
-Интерфейс на русском; адрес сервера и модели — в **Настройках**; чаты сохраняются автоматически, у каждого пункта меню **⋯** (переименовать, удалить).
+Обработка читает рабочую область по пути `/workspace/workspace`.
 
-**Агент в браузере:** подключение к LLM — [`workspace/config.json`](workspace/config.json) (XHR через [`web/js/llm-xhr.js`](web/js/llm-xhr.js), read/write через мост 1С). Сессии — `workspace/sessions/*.json`, агенты — `workspace/agents/*.md`. Dev: [`stub-1c-platform.js`](web/js/stub-1c-platform.js). `python3 scripts/harness_dev.py` — только статика; LLM — **прямой XHR** на `https://ollama.com/v1` из `config.json` (ключ в настройках / `OLLAMA_API_KEY` → dev-config). После правок: `bash scripts/verify_harness.sh` (см. [AGENTS.md](AGENTS.md)).
+## Как пользоваться
 
-## Внешняя обработка
+### Обработка
 
-Файл [`epf/1CHarness.epf`](epf/1CHarness.epf) — обработка с формой и **полем HTML** (`index.html?backend=1c&demo=1`).
+1. Загрузите конфигурацию из `src/cf` в файловую базу. Каталог базы в git не хранится.
+2. Откройте [`epf/1CHarness.epf`](epf/1CHarness.epf) в 1С:Предприятии. На предупреждении о небезопасных действиях нажмите «Да»: так платформа разрешает внешнюю обработку и локальный html.
+3. При первом открытии форма сама записывает три позиции номенклатуры, розничные цены и проведённую расходную накладную ООО «Ромашка». Сумма оборотов продаж — 2 980.
+4. Меню слева сверху → **Настройки**. На вкладке «Подключение» адрес `https://ollama.com/v1`, стиль OpenAI-compatible, модель `gemma4:31b-cloud`, ключ Ollama Cloud. Ключ пишется в `workspace/config.json`; в репозитории поле пустое. На вкладке «Интерфейс» выбирается палитра и яркость.
+5. Сообщение уходит по Enter. Shift+Enter переносит строку.
 
-**Исходники в git:** иерархический XML в [`src/1CHarness/`](src/1CHarness/) (корень [`CHarness1C.xml`](src/1CHarness/CHarness1C.xml)). Отдельные файлы [`src/epf/*.bsl`](src/epf/) — черновики для v0.2 (HTML + мост); их нужно переносить в `Ext/*.bsl` внутри дерева XML.
+Запрос к регистру из чата обработки:
 
-Сборка и выгрузка — **Конфигуратор в пакетном режиме** (`DESIGNER /LoadExternalDataProcessorOrReportFromFiles`, `/DumpExternalDataProcessorOrReportToFiles` + файловая ИБ). Через навыки **epf-build** / **epf-dump** (cc-1c-skills). Перед запуском закройте сеансы 1С с этой ИБ. Тестовая ИБ — каталог `bases/` (не в git).
+![Обороты продаж в чате](docs/images/chat-query.png)
 
-Мост UI → 1С: скрытый `#harness-1c-bridge` + `window.harnessDeliverResponse()`; опрос раз в секунду в модуле формы.
+Подключение и палитра:
 
-Запуск (учебная платформа, один сеанс ИБ):
+![Настройки подключения](docs/images/settings-connection.png)
 
-```bash
-DISPLAY=:1 /opt/1cv8t/x86_64/8.3.27.2342/1cv8t /Execute"/path/to/1CHarness/epf/1CHarness.epf"
-```
+![Настройки интерфейса](docs/images/settings-interface.png)
 
-Тестовая файловая ИБ для разработки: `/workspace/bases/harness-empty` (не в git).
+Черновик без записи: попросите вызвать `open_draft` с типом `Документ.РасходнаяНакладная` и полем контрагента. Форма открывается рядом с чатом, документ не проводится.
 
-### Просмотр в браузере (демо без LLM)
+![Черновик расходной накладной](docs/images/draft-invoice.png)
 
-```bash
-cd /path/to/1CHarness
-python3 -m http.server 8765
-```
+### Браузер
 
-Откройте [http://127.0.0.1:8765/index.html?demo=1](http://127.0.0.1:8765/index.html?demo=1) — три примерных диалога (markdown, таблицы, BSL; в «Обороты по счёту 51» — столбцы, линия, круг, кольцо). Оформление — **Настройки → Интерфейс**. Пересоздать демо: `?demo=reset`.
+Откройте `index.html` двойным щелчком. Подключение то же: меню → Настройки. Платформенные инструменты в браузере не выполняются, их отдаёт сеанс 1С. Файлы рабочей области браузер берёт из копии, вшитой в страницу.
+
+### Инструменты сеанса
+
+- `run_query` — запрос, в ответе колонки и строки
+- `inspect_metadata` — реквизиты, табличные части, измерения и ресурсы
+- `read_object`, `make_navlink` — карточка и навигационная ссылка по `{type, uuid}`
+- `sketch_query`, `delegate_task` — эскиз запроса и выборка в `workspace/data`
+- `report_describe`, `report_run`, `report_compose` — отчётов в этой конфигурации нет, `report_compose` собирает таблицу запросом
+- `open_draft` — форма нового объекта без записи
+- `fs_read`, `fs_write`, `fs_list` — файлы рабочей области
