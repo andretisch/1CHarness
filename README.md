@@ -52,4 +52,4 @@
 - `sketch_query`, `delegate_task` — эскиз запроса и выборка в `workspace/data`
 - `report_describe`, `report_run`, `report_compose` — отчётов в этой конфигурации нет, `report_compose` собирает таблицу запросом
 - `open_draft` — форма нового объекта без записи
-- `fs_read`, `fs_write`, `fs_list` — файлы рабочей области
+- `fs_read`, `fs_write`, `fs_list` — файлы рабочей области; `fs_write` создаёт недостающие папки по пути

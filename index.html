@@ -4134,7 +4134,7 @@ return He}()
 //# sourceMappingURL=bootstrap.bundle.min.js.map
 </script>
 <script>
-window.__HARNESS_DISK = {"config.json": "{\n  \"connection\": {\n    \"apiBase\": \"https://ollama.com/v1\",\n    \"apiStyle\": \"openai\",\n    \"model\": \"gemma4:31b-cloud\",\n    \"apiKey\": \"\"\n  },\n  \"generation\": {\n    \"temperature\": 0.4\n  }\n}\n", "manifest.json": "[\n  \"config.json\",\n  \"manifest.json\",\n  \"agents/default.md\",\n  \"data/sample.txt\",\n  \"skills/query.md\",\n  \"sessions/.gitkeep\"\n]\n", "agents/default.md": "# 1СХарнесс — агент по умолчанию\n\nТы помощник на платформе 1С:Предприятие. Отвечай по-русски, кратко и по делу.\n\n## Инструменты\n\nФайлы только внутри workspace, через инструменты:\n\n- `fs_list`, `fs_read`, `fs_write`, `fs_edit`, `fs_search`, `fs_glob`, `fs_mkdir`\n- `session_now` — дата сеанса\n- `calc` — арифметика\n- `find_in_chat` — поиск по сохранённым диалогам\n- `find_skill` — playbook в `skills/` и `agents/`\n- `draw_chart` — график bar, line или hbar\n\nЗапросы к базе, метаданные, отчёты и формы (`run_query`, `inspect_metadata`, `read_object`, `make_navlink`, `sketch_query`, `delegate_task`, `report_describe`, `report_run`, `report_compose`, `open_draft`) выполняются только в сеансе 1С. Не выдумывай строки выборки и не пиши в информационную базу.\n\nНе выдумывай содержимое файлов: если нужны данные — вызови инструмент.\n", "data/sample.txt": "Демо-файл для инструмента read_file.\nОбороты по счёту 51 за март 2026 — заглушка 1С.\n", "skills/query.md": "# Эскиз запроса\n\nКогда пользователь просит выборку из базы, не выдумывай результат.\n\n1. Уточни объект, период и измерения.\n2. Вызови `sketch_query` с формулировкой задачи.\n3. Текст запроса выполняет только `run_query` в сеансе 1С.\n4. Ссылки передавай как `{ \"type\", \"uuid\" }`.\n", "sessions/.gitkeep": ""};
+window.__HARNESS_DISK = {"config.json": "{\n  \"connection\": {\n    \"apiBase\": \"https://ollama.com/v1\",\n    \"apiStyle\": \"openai\",\n    \"model\": \"gemma4:31b-cloud\",\n    \"apiKey\": \"\"\n  },\n  \"generation\": {\n    \"temperature\": 0.4\n  }\n}\n", "manifest.json": "[\n  \"config.json\",\n  \"manifest.json\",\n  \"agents/default.md\",\n  \"data/sample.txt\",\n  \"skills/query.md\",\n  \"sessions/.gitkeep\"\n]\n", "agents/default.md": "# 1СХарнесс — агент по умолчанию\n\nТы помощник на платформе 1С:Предприятие. Отвечай по-русски, кратко и по делу.\n\n## Инструменты\n\nФайлы только внутри workspace, через инструменты:\n\n- `fs_list`, `fs_read`, `fs_write`\n- `session_now` — дата сеанса\n- `calc` — арифметика\n- `find_in_chat` — поиск по сохранённым диалогам\n- `find_skill` — playbook в `skills/` и `agents/`\n- `draw_chart` — график bar, line или hbar\n\nЗапросы к базе, метаданные, отчёты и формы (`run_query`, `inspect_metadata`, `read_object`, `make_navlink`, `sketch_query`, `delegate_task`, `report_describe`, `report_run`, `report_compose`, `open_draft`) выполняются только в сеансе 1С. Не выдумывай строки выборки и не пиши в информационную базу.\n\nНе выдумывай содержимое файлов: если нужны данные — вызови инструмент.\n", "data/sample.txt": "Демо-файл для инструмента read_file.\nОбороты по счёту 51 за март 2026 — заглушка 1С.\n", "skills/query.md": "# Эскиз запроса\n\nКогда пользователь просит выборку из базы, не выдумывай результат.\n\n1. Уточни объект, период и измерения.\n2. Вызови `sketch_query` с формулировкой задачи.\n3. Текст запроса выполняет только `run_query` в сеансе 1С.\n4. Ссылки передавай как `{ \"type\", \"uuid\" }`.\n", "sessions/.gitkeep": ""};
 </script>
 <script>
 /** Схемы инструментов по ТЗ 1СХарнесс (OpenAI tools). */
@@ -4162,25 +4162,14 @@ const HARNESS_OPENAI_TOOLS = [
     offset: num('Строка с 1, необязательно'),
     limit: num('Сколько строк вернуть, необязательно'),
   }, ['path']),
-  fn('fs_write', 'Записать текстовый файл внутри workspace (перезапись).', {
+  fn('fs_write', 'Записать текстовый файл внутри workspace. Недостающие папки по пути создаются.', {
     path: str('Относительный путь'),
     content: str('Полное содержимое'),
   }, ['path', 'content']),
-  fn('fs_edit', 'Заменить один фрагмент текста в файле workspace.', {
-    path: str('Относительный путь'),
-    old_text: str('Фрагмент, который нужно заменить (ровно одно вхождение)'),
-    new_text: str('Новый фрагмент'),
-  }, ['path', 'old_text', 'new_text']),
   fn('fs_search', 'Найти подстроку в текстовых файлах workspace.', {
     query: str('Что искать'),
     path: str('Каталог или файл, по умолчанию весь workspace'),
   }, ['query']),
-  fn('fs_glob', 'Найти пути по маске (* и **).', {
-    pattern: str('Маска, например skills/**/*.md'),
-  }, ['pattern']),
-  fn('fs_mkdir', 'Создать каталог внутри workspace.', {
-    path: str('Относительный путь каталога'),
-  }, ['path']),
   fn('session_now', 'Дата и время сеанса и день недели.', {}),
   fn('calc', 'Посчитать арифметическое выражение (числа, + - * / % скобки, запись 1e9).', {
     expression: str('Выражение'),
@@ -4261,27 +4250,6 @@ function normalizeRel(rel) {
   const p = String(rel || '').trim().replace(/\\/g, '/').replace(/^\/+/, '');
   if (!p || p.split('/').includes('..')) throw new Error('Недопустимый путь');
   return p;
-}
-
-function globToRegExp(pattern) {
-  let re = '';
-  for (let i = 0; i < pattern.length; i += 1) {
-    const c = pattern[i];
-    if (c === '*') {
-      if (pattern[i + 1] === '*') {
-        re += '.*';
-        i += 1;
-        if (pattern[i + 1] === '/') i += 1;
-      } else {
-        re += '[^/]*';
-      }
-    } else if ('.+^${}()|[]\\'.includes(c)) {
-      re += `\\${c}`;
-    } else {
-      re += c;
-    }
-  }
-  return new RegExp(`^${re}$`, 'i');
 }
 
 function sliceLines(content, offset, limit) {
@@ -4410,31 +4378,6 @@ async function executeHarnessTool(name, args, fs) {
     const content = args.content ?? '';
     await fs.write(path, content);
     return { path, bytes: String(content).length, ok: true };
-  }
-  if (tool === 'fs_mkdir') {
-    const path = normalizeRel(args.path).replace(/\/$/, '');
-    await fs.write(`${path}/.keep`, '');
-    return { path, ok: true };
-  }
-  if (tool === 'fs_edit') {
-    const path = normalizeRel(args.path);
-    const oldText = String(args.old_text ?? '');
-    const fresh = String(args.new_text ?? '');
-    if (!oldText) throw new Error('Пустой old_text');
-    const content = await fs.read(path);
-    const count = content.split(oldText).length - 1;
-    if (count === 0) throw new Error('Фрагмент не найден');
-    if (count > 1) throw new Error('Фрагмент встречается больше одного раза');
-    const next = content.replace(oldText, fresh);
-    await fs.write(path, next);
-    return { path, ok: true };
-  }
-  if (tool === 'fs_glob') {
-    const pattern = String(args.pattern || '').trim();
-    if (!pattern) throw new Error('Пустой pattern');
-    const re = globToRegExp(pattern.replace(/\\/g, '/'));
-    const paths = (await fs.list()).filter((p) => re.test(p) || re.test(p.split('/').pop()));
-    return { pattern, paths: paths.slice(0, 200) };
   }
   if (tool === 'fs_search') {
     const query = String(args.query || '');
