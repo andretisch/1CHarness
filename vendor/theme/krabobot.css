@@ -1,0 +1,286 @@
+/*
+  Палитра крабобот (krabobot/web/static/chat.css), адаптация под Bootstrap UI 1СХарнесс.
+  Поле ввода (compose) стилизуется отдельно в index.html.
+*/
+
+:root,
+[data-bs-theme="light"] {
+  color-scheme: light;
+
+  --kb-navy: #003366;
+  --kb-navy-deep: #001a33;
+  --kb-accent: #007bff;
+  --kb-cyan: #00e5ff;
+  --kb-bg-page: #f0f6fc;
+  --kb-surface: #ffffff;
+  --kb-surface-chat: #f8fbff;
+  --kb-border: #c5d9ef;
+  --kb-border-soft: #e4eef8;
+  --kb-text: #0d2137;
+  --kb-muted: #5a6f85;
+  --kb-user: #0d8f4a;
+  --kb-assistant-bg: #e8f0fb;
+  --kb-danger: #d1242f;
+
+  --bs-body-font-family: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --bs-font-sans-serif: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --bs-body-bg: var(--kb-bg-page);
+  --bs-body-color: var(--kb-text);
+  --bs-emphasis-color: var(--kb-navy);
+  --bs-secondary-color: var(--kb-muted);
+  --bs-tertiary-color: var(--kb-muted);
+  --bs-border-color: var(--kb-border);
+  --bs-border-color-translucent: rgba(197, 217, 239, 0.65);
+
+  --bs-secondary-bg: var(--kb-surface-chat);
+  --bs-tertiary-bg: #eef4fb;
+
+  --bs-primary: var(--kb-accent);
+  --bs-primary-rgb: 0, 123, 255;
+  --bs-primary-text-emphasis: var(--kb-navy);
+  --bs-primary-bg-subtle: #dcf3e8;
+  --bs-primary-border-subtle: var(--kb-user);
+
+  --bs-secondary: #5a6f85;
+  --bs-secondary-rgb: 90, 111, 133;
+  --bs-success: #0d8f4a;
+  --bs-danger: var(--kb-danger);
+  --bs-warning: #ffc107;
+  --bs-info: var(--kb-accent);
+  --bs-light: var(--kb-surface-chat);
+  --bs-dark: var(--kb-navy-deep);
+
+  --bs-link-color: var(--kb-accent);
+  --bs-link-hover-color: #0056b3;
+  --bs-focus-ring-color: rgba(0, 123, 255, 0.25);
+}
+
+[data-bs-theme="dark"] {
+  color-scheme: dark;
+
+  --kb-bg-page: #071525;
+  --kb-surface: #0f2844;
+  --kb-surface-chat: #122640;
+  --kb-border: #2a4a6e;
+  --kb-border-soft: #1e3a5c;
+  --kb-text: #e8f0fb;
+  --kb-muted: #8aa4c0;
+  --kb-navy: #7eb8ff;
+  --kb-accent: #4da3ff;
+  --kb-assistant-bg: #1a3555;
+
+  --bs-body-bg: var(--kb-bg-page);
+  --bs-body-color: var(--kb-text);
+  --bs-emphasis-color: #fff;
+  --bs-secondary-color: var(--kb-muted);
+  --bs-border-color: var(--kb-border);
+  --bs-secondary-bg: #0c1f36;
+  --bs-tertiary-bg: #152a45;
+
+  --bs-primary: var(--kb-accent);
+  --bs-primary-rgb: 77, 163, 255;
+  --bs-primary-bg-subtle: #1a3d32;
+  --bs-primary-border-subtle: #2e7d52;
+  --bs-link-color: #7eb8ff;
+  --bs-link-hover-color: #00e5ff;
+}
+
+html,
+body {
+  background-color: var(--bs-body-bg);
+  background-image: radial-gradient(
+    ellipse 120% 80% at 50% -20%,
+    rgba(0, 229, 255, 0.08),
+    transparent 55%
+  );
+  color: var(--bs-body-color);
+}
+
+#sidebar.bg-body-tertiary {
+  background-color: var(--kb-surface) !important;
+  border-right: 1px solid var(--kb-border-soft) !important;
+  box-shadow: 2px 0 12px rgba(0, 51, 102, 0.06);
+}
+
+.offcanvas-title,
+#sidebar .small.text-body-secondary {
+  color: var(--kb-navy) !important;
+  font-weight: 700;
+}
+
+[data-bs-theme="dark"] .offcanvas-title,
+[data-bs-theme="dark"] #sidebar .small.text-body-secondary {
+  color: var(--kb-text) !important;
+}
+
+.chat-input-container {
+  background: transparent !important;
+  border-top: 0 !important;
+  position: relative;
+  z-index: 2;
+}
+
+.chat-panel-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.chat-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.chat-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("../assets/krabobot-logo.png");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: min(72%, 520px);
+  opacity: 0.28;
+}
+
+.chat-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(248, 251, 255, 0.52);
+}
+
+[data-bs-theme="dark"] .chat-backdrop::after {
+  background: rgba(7, 21, 37, 0.72);
+}
+
+[data-bs-theme="dark"] .chat-backdrop::before {
+  opacity: 0.14;
+}
+
+.chat-container {
+  position: relative;
+  z-index: 1;
+  flex-grow: 1;
+  min-height: 0;
+  background: transparent;
+}
+
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: linear-gradient(180deg, #1a8cff 0%, var(--kb-accent) 100%);
+  --bs-btn-border-color: #0066d6;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #1a8cff;
+  --bs-btn-hover-border-color: var(--kb-cyan);
+  background: linear-gradient(180deg, #1a8cff 0%, var(--kb-accent) 100%);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.28);
+}
+
+.btn-outline-secondary,
+.btn-outline-primary {
+  --bs-btn-color: var(--kb-navy);
+  --bs-btn-border-color: var(--kb-border);
+  --bs-btn-hover-bg: rgba(0, 123, 255, 0.06);
+  --bs-btn-hover-border-color: var(--kb-accent);
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary,
+[data-bs-theme="dark"] .btn-outline-primary {
+  --bs-btn-color: var(--kb-text);
+}
+
+.list-group-item.active {
+  background-color: rgba(0, 123, 255, 0.08);
+  border-color: var(--kb-accent);
+  color: var(--kb-navy);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+}
+
+[data-bs-theme="dark"] .list-group-item.active {
+  color: var(--kb-text);
+}
+
+.user-message .message-body {
+  background-color: #dcf3e8;
+  border-color: var(--kb-user);
+  border-left-width: 3px;
+}
+
+.model-message .message-body {
+  background-color: #dfeaf9;
+  border-color: var(--kb-accent);
+  border-left-width: 3px;
+}
+
+[data-bs-theme="dark"] .user-message .message-body {
+  background-color: #1a3d32;
+  border-color: #2e7d52;
+}
+
+[data-bs-theme="dark"] .model-message .message-body {
+  background-color: var(--kb-assistant-bg);
+  border-color: var(--kb-accent);
+}
+
+.user-message .rounded-circle.bg-secondary {
+  background-color: var(--kb-user) !important;
+  color: #fff !important;
+  border: none;
+}
+
+.model-message .rounded-circle.bg-secondary {
+  background-color: var(--kb-navy) !important;
+  color: #fff !important;
+  border: none;
+}
+
+[data-bs-theme="dark"] .model-message .rounded-circle.bg-secondary {
+  background-color: var(--kb-accent) !important;
+  color: #071525 !important;
+}
+
+.modal-content {
+  border-radius: 12px;
+  border: 1px solid var(--kb-border-soft);
+  box-shadow: 0 8px 32px rgba(0, 51, 102, 0.12);
+}
+
+.modal-header {
+  border-bottom-color: var(--kb-border-soft);
+}
+
+.modal-title {
+  color: var(--kb-navy);
+  font-weight: 700;
+}
+
+[data-bs-theme="dark"] .modal-title {
+  color: var(--kb-text);
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--kb-navy);
+  font-weight: 600;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--kb-accent);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+.message-body blockquote {
+  border-left: 3px solid var(--kb-border);
+  background: rgba(255, 255, 255, 0.45);
+  color: var(--kb-muted);
+}
+
+.message-body a {
+  color: var(--kb-accent);
+}

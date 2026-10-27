@@ -1,0 +1,33 @@
+# Локальные файловые ИБ 1С (1Cv8.1CD, журналы, …)
+/bases/
+
+# Тестовая конфигурация не входит в проект
+/src/cf/
+
+# Скачанные дистрибутивы платформы, куки, логи установки
+/dist/
+
+# Локальные прогоны обработки
+/epf/*.log
+
+# Сессии агента (JSON в workspace)
+workspace/sessions/*.json
+!workspace/sessions/.gitkeep
+
+**/__pycache__/
+*.pyc
+
+# Ключ LLM для локального dev (генерируется из OLLAMA_API_KEY)
+/web/js/llm-dev-config.js
+/node_modules/
+/package.json
+/package-lock.json
+
+# Справочник навыков (локальная копия cc-1c-skills, не коммитить)
+.cursor/cc-1c-skills-reference/
+
+# OS / редактор
+.DS_Store
+Thumbs.db
+*.swp
+*~
