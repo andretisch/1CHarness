@@ -41,3 +41,4 @@ await chat.screenshot({ path: `${outDir}/chat-charts-demo.png`, fullPage: false 
 
 await browser.close();
 console.log('Saved charts to', outDir);
+console.log('For 1C window frames use scripts/capture-chart-screenshots-1c.sh');

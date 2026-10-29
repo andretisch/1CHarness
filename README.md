@@ -34,13 +34,15 @@
 
 Инструмент **`draw_chart`** (bar, line, pie, doughnut, hbar) вставляет интерактивные превью Chart.js в пузырь ответа — удобно после `run_query` или отчёта.
 
-![Графики в диалоге (светлая тема)](docs/images/charts-grid-light.png)
+Скриншоты — **окно 1С:Предприятие** с обработкой 1СХарнесс (не отдельный браузер):
 
-![Графики в диалоге (тёмная тема)](docs/images/charts-grid-dark.png)
+![Графики в чате 1С (светлая тема)](docs/images/charts-grid-light.png)
 
-![Чат с таблицей и блоком графиков](docs/images/chat-charts-demo.png)
+![Графики в чате 1С (тёмная тема)](docs/images/charts-grid-dark.png)
 
-Демо-диалог с графиками в браузере без 1С: `index.html?demo=fresh` (локальный HTTP-сервер из корня репозитория).
+![Диалог с таблицей и сеткой графиков в 1С](docs/images/chat-charts-demo.png)
+
+Переснять: положите демо-сеанс в `workspace/sessions/readme-charts-demo.json`, откройте обработку и выполните [`scripts/capture-chart-screenshots-1c.sh`](scripts/capture-chart-screenshots-1c.sh) (нужны `DISPLAY`, `xdotool`, ImageMagick). В браузере без 1С: `index.html?demo=fresh`.
 
 ## Анонимизация и интерфейс
 
