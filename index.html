@@ -4170,7 +4170,7 @@ const HARNESS_OPENAI_TOOLS = [
     query: str('Что искать'),
     path: str('Каталог или файл, по умолчанию весь workspace'),
   }, ['query']),
-  fn('session_now', 'Дата и время сеанса и день недели.', {}),
+  fn('session_now', 'Дата и время сеанса, день недели, configurationName и configurationSynonym текущей конфигурации.', {}),
   fn('calc', 'Посчитать арифметическое выражение (числа, + - * / % скобки, запись 1e9).', {
     expression: str('Выражение'),
   }, ['expression']),
@@ -5062,7 +5062,15 @@ async function ensureDataExplorerPrompt() {
 async function runExploreDataSubagent(task, opts) {
   const trimmed = String(task || '').trim();
   if (!trimmed) return { ok: false, error: 'Пустая задача explore_data' };
-  const system = await ensureDataExplorerPrompt();
+  let system = await ensureDataExplorerPrompt();
+  const mapState = await ensureConfigMap();
+  if (mapState.promptBlock && mapState.status === 'ok') {
+    system += `\n\n## Карта data/map.json\n\n${mapState.promptBlock}`;
+  } else if (mapState.status === 'mismatch') {
+    system += `\n\n## Карта data/map.json\n\n${mapState.message} Объекты карты проверяй через inspect_metadata.`;
+  } else if (mapState.status === 'missing' || mapState.status === 'invalid') {
+    system += `\n\n## Карта data/map.json\n\n${mapState.message || 'Карта недоступна.'} Ищи регистры через inspect_metadata.`;
+  }
   try {
     const turn = await runAgentTurn({
       messages: [{ role: 'system', content: system }, { role: 'user', content: trimmed }],
@@ -5350,6 +5358,105 @@ const workspaceConfigReady = ensureWorkspaceConfigLoaded();
 
 let cachedSystemPrompt = null;
 
+const CONFIG_MAP_PATH = 'data/map.json';
+let cachedConfigMapState = null;
+
+function validateConfigMapStructure(raw) {
+  const errors = [];
+  if (!raw || typeof raw !== 'object') errors.push('корень не объект');
+  if (raw.version !== 1) errors.push('version должна быть 1');
+  if (!raw.configuration?.name) errors.push('нет configuration.name');
+  if (!Array.isArray(raw.objects)) errors.push('objects не массив');
+  if (!Array.isArray(raw.flows)) errors.push('flows не массив');
+  return errors;
+}
+
+function formatConfigMapForPrompt(map) {
+  const lines = [];
+  lines.push(`Конфигурация: ${map.configuration.name}${map.configuration.synonym ? ` (${map.configuration.synonym})` : ''}`);
+  if (map.notes) lines.push(String(map.notes));
+  if (map.topics && typeof map.topics === 'object') {
+    lines.push('Темы:');
+    for (const [key, topic] of Object.entries(map.topics)) {
+      const hint = topic.objects?.length
+        ? topic.objects.join(', ')
+        : (topic.description || '—');
+      lines.push(`- ${key} (${topic.label || key}): ${hint}`);
+    }
+  }
+  const usedObjects = (map.objects || []).filter((o) => o.used !== false);
+  lines.push(`Объекты (used=${usedObjects.length}):`);
+  for (const obj of usedObjects.slice(0, 24)) {
+    let line = `- ${obj.fullName}`;
+    const qh = obj.queryHints || {};
+    if (qh.turnovers) line += ` → ${qh.turnovers}`;
+    else if (qh.slice) line += ` → ${qh.slice}`;
+    else if (qh.list) line += ` → ${qh.list}`;
+    lines.push(line);
+  }
+  if ((map.flows || []).length) {
+    lines.push('Связи (flows):');
+    for (const flow of map.flows.slice(0, 16)) {
+      lines.push(`- ${flow.from} → ${flow.to} (${flow.on}): ${flow.effect}`);
+    }
+  }
+  const text = lines.join('\n');
+  return text.length > 6000 ? `${text.slice(0, 5997)}…` : text;
+}
+
+async function ensureConfigMap() {
+  if (cachedConfigMapState) return cachedConfigMapState;
+  const state = {
+    status: 'missing',
+    map: null,
+    promptBlock: '',
+    message: '',
+    level: 'warning',
+  };
+  const out = await invoke1cTool('fs_read', { path: CONFIG_MAP_PATH });
+  if (!out.ok) {
+    state.message = 'Карта data/map.json не найдена — см. skills/config-map.md.';
+    cachedConfigMapState = state;
+    return state;
+  }
+  let map;
+  try {
+    map = JSON.parse(out.result.content);
+  } catch {
+    state.status = 'invalid';
+    state.message = 'data/map.json: неверный JSON.';
+    cachedConfigMapState = state;
+    return state;
+  }
+  const structureErrors = validateConfigMapStructure(map);
+  if (structureErrors.length) {
+    state.status = 'invalid';
+    state.message = `data/map.json: ${structureErrors.join('; ')}`;
+    cachedConfigMapState = state;
+    return state;
+  }
+  state.map = map;
+  state.promptBlock = formatConfigMapForPrompt(map);
+  if (isReal1CBridge()) {
+    const sessionInfo = await invoke1cTool('session_now', {});
+    if (sessionInfo.ok && sessionInfo.result?.configurationName) {
+      state.sessionConfiguration = sessionInfo.result.configurationName;
+      if (sessionInfo.result.configurationName !== map.configuration.name) {
+        state.status = 'mismatch';
+        state.message = `Карта для «${map.configuration.name}», в сеансе «${sessionInfo.result.configurationName}». Обновите data/map.json (skills/config-map.md).`;
+        cachedConfigMapState = state;
+        return state;
+      }
+    }
+  }
+  state.status = 'ok';
+  state.level = 'info';
+  const usedCount = (map.objects || []).filter((o) => o.used !== false).length;
+  state.message = `Карта данных: ${map.configuration.name}, объектов ${usedCount}.`;
+  cachedConfigMapState = state;
+  return state;
+}
+
 function harnessAgentEnabled() {
   return true;
 }
@@ -5407,6 +5514,8 @@ window.HarnessAgent = {
   loadSessionJsonViaBridge,
   invoke1cTool,
   ensureSystemPrompt,
+  ensureConfigMap,
+  CONFIG_MAP_PATH,
 };
 
 document.dispatchEvent(new CustomEvent('harness-agent-ready'));
@@ -5590,7 +5699,14 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             configureMarked();
             initContextMeterTooltip();
             const cfg = window.HarnessAgent?.getAgentConfig?.();
-            showStatus(`Агент: ${cfg?.model || 'gemma4:31b-cloud'} (OpenAI API), инструменты → мост 1С.`, 'info');
+            let statusText = `Агент: ${cfg?.model || 'gemma4:31b-cloud'} (OpenAI API), инструменты → мост 1С.`;
+            if (harnessAgentMode() && typeof isReal1CBridge === 'function' && isReal1CBridge() && window.HarnessAgent?.ensureConfigMap) {
+                try {
+                    const mapState = await window.HarnessAgent.ensureConfigMap();
+                    if (mapState?.message) statusText = `${statusText} ${mapState.message}`;
+                } catch (_) { /* карта необязательна для UI */ }
+            }
+            showStatus(statusText, 'info');
             const demoMode = isDemoMode();
             if (demoMode) seedDemoSessionsIfNeeded();
             try {
