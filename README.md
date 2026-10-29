@@ -41,7 +41,8 @@
 - `run_query` — запрос, в ответе колонки и строки; объект `params` подставляется в запрос, ссылка передаётся как `{type, uuid}`
 - `inspect_metadata` — реквизиты, табличные части, измерения и ресурсы
 - `read_object`, `make_navlink` — карточка и навигационная ссылка по `{type, uuid}`
-- `sketch_query`, `delegate_task` — эскиз запроса и выборка в `workspace/data`
+- `explore_data` — субагент: метаданные и запросы внутри 1С, главному агенту только краткий `summary` и trace
+- `sketch_query`, `delegate_task` — эскиз запроса и выборка в `workspace/data` (если нужен явный вызов, не через `explore_data`)
 - `report_describe`, `report_run`, `report_compose` — отчёт `ПродажиТоваров` (синоним «Продажи») по оборотам регистра Продажи; `report_run` возвращает строки и сумму
 - `open_draft` — форма нового объекта без записи
 - `fs_read`, `fs_write`, `fs_list`, `fs_search` — файлы рабочей области; `fs_write` создаёт недостающие папки по пути

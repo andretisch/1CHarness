@@ -4206,6 +4206,9 @@ const HARNESS_OPENAI_TOOLS = [
   fn('delegate_task', 'Субагент данных: выборка до ~200 строк, data_ref родителю. Только сеанс 1С.', {
     task: str('Задача выборки'),
   }, ['task']),
+  fn('explore_data', 'Субагент данных в сеансе 1С: inspect_metadata и run_query внутри, родителю только summary и короткий trace. Для вопросов по базе предпочитай этот инструмент вместо цепочки run_query.', {
+    task: str('Что узнать в базе: остатки, суммы, долги, обороты, перечень'),
+  }, ['task']),
   fn('report_describe', 'Описание варианта отчёта БСП по имени. Только сеанс 1С.', {
     name: str('Имя или фрагмент имени варианта'),
   }, ['name']),
@@ -4236,6 +4239,19 @@ const PLATFORM_TOOLS = new Set([
   'report_compose',
   'open_draft',
 ]);
+
+/** Выполняются в странице (вложенный LLM), не уходят в мост 1С. */
+const CLIENT_SIDE_TOOLS = new Set(['explore_data']);
+
+const DATA_EXPLORER_TOOL_NAMES = new Set([
+  'inspect_metadata',
+  'run_query',
+  'sketch_query',
+  'report_describe',
+  'report_run',
+]);
+const DATA_EXPLORER_TOOLS = HARNESS_OPENAI_TOOLS.filter((t) => DATA_EXPLORER_TOOL_NAMES.has(t.function.name));
+const DATA_EXPLORER_MAX_STEPS = 6;
 
 const ALIASES = {
   read_file: 'fs_read',
@@ -4959,10 +4975,124 @@ async function executeToolCall(tc) {
   return invoke1cTool(fn.name, args);
 }
 
+function compactRowForTrace(row) {
+  const out = {};
+  for (const [k, v] of Object.entries(row || {})) {
+    if (v && typeof v === 'object' && v.presentation) out[k] = v.presentation;
+    else if (typeof v === 'string' && v.length > 120) out[k] = `${v.slice(0, 117)}…`;
+    else out[k] = v;
+  }
+  return out;
+}
+
+/** Сжатый след субагента для родителя — без полных таблиц. */
+function summarizeSubagentMessages(messages) {
+  const queryByCallId = new Map();
+  const metadataChecked = [];
+  const queries = [];
+  const errors = [];
+
+  for (const m of messages) {
+    if (m.role === 'assistant' && Array.isArray(m.tool_calls)) {
+      for (const tc of m.tool_calls) {
+        const toolName = tc.function?.name;
+        if (toolName === 'run_query') {
+          try {
+            const args = JSON.parse(tc.function.arguments || '{}');
+            queryByCallId.set(
+              tc.id,
+              String(args.query || '').replace(/\s+/g, ' ').trim().slice(0, 400),
+            );
+          } catch { /* skip */ }
+        } else if (toolName === 'inspect_metadata') {
+          try {
+            const args = JSON.parse(tc.function.arguments || '{}');
+            if (args.name) metadataChecked.push(String(args.name));
+          } catch { /* skip */ }
+        }
+      }
+    }
+    if (m.role !== 'tool') continue;
+    let payload;
+    try {
+      payload = JSON.parse(m.content);
+    } catch {
+      continue;
+    }
+    if (payload.error) {
+      errors.push(String(payload.error).slice(0, 400));
+      continue;
+    }
+    if (payload.fullName || payload.name) {
+      metadataChecked.push(payload.fullName || payload.name);
+    }
+    if (payload.columns && Array.isArray(payload.rows)) {
+      queries.push({
+        query: queryByCallId.get(m.tool_call_id) || '',
+        ok: true,
+        rowCount: payload.rowCount ?? payload.rows.length,
+        preview: payload.rows.slice(0, 3).map(compactRowForTrace),
+      });
+    } else if (payload.executed && (payload.total != null || payload.rowCount != null)) {
+      queries.push({
+        query: `report_run:${payload.name || payload.synonym || ''}`,
+        ok: true,
+        rowCount: payload.rowCount,
+        total: payload.total,
+        preview: (payload.rows || []).slice(0, 3).map(compactRowForTrace),
+      });
+    }
+  }
+
+  return {
+    metadata_checked: [...new Set(metadataChecked)].slice(0, 12),
+    queries: queries.slice(0, 8),
+    errors: errors.slice(0, 5),
+  };
+}
+
+let cachedDataExplorerPrompt = null;
+
+async function ensureDataExplorerPrompt() {
+  if (cachedDataExplorerPrompt) return cachedDataExplorerPrompt;
+  cachedDataExplorerPrompt = await loadSystemPromptViaBridge('data-explorer');
+  return cachedDataExplorerPrompt;
+}
+
+async function runExploreDataSubagent(task, opts) {
+  const trimmed = String(task || '').trim();
+  if (!trimmed) return { ok: false, error: 'Пустая задача explore_data' };
+  const system = await ensureDataExplorerPrompt();
+  try {
+    const turn = await runAgentTurn({
+      messages: [{ role: 'system', content: system }, { role: 'user', content: trimmed }],
+      tools: DATA_EXPLORER_TOOLS,
+      maxToolSteps: DATA_EXPLORER_MAX_STEPS,
+      temperature: 0.2,
+      signal: opts.signal,
+      onToolEvent: (ev) => opts.onToolEvent?.({ ...ev, subagent: true }),
+    });
+    const trace = summarizeSubagentMessages(turn.messages);
+    return {
+      ok: true,
+      result: {
+        summary: turn.content,
+        ...trace,
+        hint: 'Итог субагента. Цифры для пользователя бери из summary и preview; полные выборки в контекст родителя не передаются.',
+      },
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: msg };
+  }
+}
+
 async function runAgentTurn(opts) {
   const cfg = getAgentConfig();
   const messages = [...opts.messages];
   const signal = opts.signal;
+  const toolSet = opts.tools ?? HARNESS_OPENAI_TOOLS;
+  const maxToolSteps = opts.maxToolSteps ?? cfg.maxToolSteps;
   let steps = 0;
   const failStreak = new Map();
   let delegateEmpty = 0;
@@ -4970,12 +5100,12 @@ async function runAgentTurn(opts) {
   const vault = anonymizeEnabled() ? createAnonymizerVault() : null;
   let blockedTool = null;
 
-  while (steps < cfg.maxToolSteps) {
+  while (steps < maxToolSteps) {
     steps += 1;
     const body = {
       model: cfg.model,
       messages,
-      tools: HARNESS_OPENAI_TOOLS,
+      tools: toolSet,
       stream: false,
       temperature: opts.temperature ?? 0.4,
     };
@@ -5001,7 +5131,16 @@ async function runAgentTurn(opts) {
           });
           continue;
         }
-        const out = await executeToolCall(tc);
+        let out;
+        if (name === 'explore_data') {
+          let task = '';
+          try {
+            task = JSON.parse(tc.function?.arguments || '{}').task;
+          } catch { /* empty */ }
+          out = await runExploreDataSubagent(task, { signal, onToolEvent: opts.onToolEvent });
+        } else {
+          out = await executeToolCall(tc);
+        }
         if (out.ok && out.result?.chart) charts.push(out.result.chart);
         if (name === 'delegate_task' && out.ok && !(out.result?.rows || []).length) {
           delegateEmpty += 1;

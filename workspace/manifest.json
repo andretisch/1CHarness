@@ -2,6 +2,7 @@
   "config.json",
   "manifest.json",
   "agents/default.md",
+  "agents/data-explorer.md",
   "data/sample.txt",
   "skills/query.md",
   "sessions/.gitkeep"
