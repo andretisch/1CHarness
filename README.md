@@ -42,7 +42,7 @@
 - `inspect_metadata` — реквизиты, табличные части, измерения и ресурсы
 - `read_object`, `make_navlink` — карточка и навигационная ссылка по `{type, uuid}`
 - `explore_data` — субагент: метаданные и запросы внутри 1С, главному агенту только краткий `summary` и trace; использует `workspace/data/map.md`
-- `data/map.md` — карта конфигурации (Markdown); в новом диалоге без карты предлагают построить её кнопками; навык — `skills/config-map.md`
+- `data/map.md` — карта конфигурации (Markdown), в git не хранится; в новом диалоге без карты предлагают построить её кнопками; навык — `skills/config-map.md`
 - `sketch_query`, `delegate_task` — эскиз запроса и выборка в `workspace/data` (если нужен явный вызов, не через `explore_data`)
 - `report_describe`, `report_run`, `report_compose` — отчёт `ПродажиТоваров` (синоним «Продажи») по оборотам регистра Продажи; `report_run` возвращает строки и сумму
 - `open_draft` — форма нового объекта без записи
