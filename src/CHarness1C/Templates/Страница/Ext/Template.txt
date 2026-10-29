@@ -4581,6 +4581,19 @@ async function writeConfigFile() {
   if (!out.ok) throw new Error(out.error || 'Не удалось записать config.json');
 }
 
+const LLM_API_KEY_LOCAL_PATH = 'llm-api-key.local';
+
+/** В 1С: ключ из workspace/llm-api-key.local (без пересборки EPF под BSL-инъекцию). */
+async function bootstrapLlmApiKeyFromLocalFile() {
+  if (!isReal1CBridge() || cache?.connection?.apiKey) return false;
+  const keyOut = await invoke1cTool('fs_read', { path: LLM_API_KEY_LOCAL_PATH });
+  if (!keyOut.ok) return false;
+  const key = String(keyOut.result?.content ?? '').replace(/^\uFEFF/, '').trim();
+  if (!key) return false;
+  cache.connection.apiKey = key;
+  return true;
+}
+
 async function loadWorkspaceConfig() {
   const out = await invoke1cTool('fs_read', { path: CONFIG_PATH });
   if (out.ok) {
@@ -4593,8 +4606,14 @@ async function loadWorkspaceConfig() {
     cache = mergeConfig(null);
   }
   cache.connection.apiBase = normalizeApiBase(cache.connection.apiBase);
+  let keyFromFile = false;
+  try {
+    keyFromFile = await bootstrapLlmApiKeyFromLocalFile();
+  } catch {
+    /* мост ещё не готов — ключ только из config / настроек */
+  }
   const devBootstrap = bootstrapFromDevEnv();
-  if (!out.ok || devBootstrap) {
+  if (!out.ok || devBootstrap || keyFromFile) {
     try {
       await writeConfigFile();
     } catch {
@@ -5492,7 +5511,59 @@ const MAP_BUILDER_TOOL_NAMES = new Set([
   'fs_search',
 ]);
 const MAP_BUILDER_TOOLS = HARNESS_OPENAI_TOOLS.filter((t) => MAP_BUILDER_TOOL_NAMES.has(t.function.name));
-const MAP_BUILDER_MAX_STEPS = 14;
+const MAP_BUILDER_MAX_STEPS = 24;
+
+async function writeFallbackConfigMap(sessionResult) {
+  const name = String(sessionResult?.configurationName || 'Unknown').trim();
+  const syn = String(sessionResult?.configurationSynonym || '').trim();
+  const today = new Date().toISOString().slice(0, 10);
+  const content = `---
+version: 1
+configurationName: ${name}
+configurationSynonym: ${syn}
+updatedAt: ${today}
+---
+
+# Карта данных
+
+Черновик после неполной автоматической сборки. Уточняйте объекты через \`inspect_metadata\` и \`explore_data\`.
+
+## Topics
+
+### money — Деньги
+- note: РегистрНакопления.ДенежныеСредства (проверить inspect_metadata)
+
+### inventory — Запасы
+- note: РегистрНакопления.Запасы
+
+### receivables — Долги покупателей
+- note: РегистрНакопления.РасчетыСПокупателями
+
+## Objects
+
+### РегистрНакопления.Запасы
+- used: no
+- topics: inventory
+- query: \`ВЫБРАТЬ ПЕРВЫЕ 1 … ИЗ РегистрНакопления.Запасы.Остатки\` — поля из inspect
+
+## Flows
+
+| From | To | On | Effect |
+|------|-----|-----|--------|
+| — | — | — | черновик |
+`;
+  return invoke1cTool('fs_write', { path: CONFIG_MAP_PATH, content });
+}
+
+const MAP_BUILDER_SYSTEM_APPEND = `
+
+## Жёсткие правила сборки
+
+1. Сначала \`session_now\`, затем **только** \`inspect_metadata\` по полным именам (РегистрНакопления.*, РегистрСведений.*, Справочник.*). **Не** вызывай \`run_query\`, пока не знаешь поля из inspect.
+2. В \`run_query\` **запрещено** поле \`Имя\` у регистров и виртуальных таблиц — только реальные измерения/ресурсы из inspect. Язык запросов 1С: ключевое слово **\`ИЗ\`** (кириллица, заглавные), не «Из». Проверка: \`ВЫБРАТЬ ПЕРВЫЕ 1 … ИЗ …\`.
+3. Не трать шаги на перебор несуществующих регистров из тестовой конфигурации «Харнесс» (Продажи, ЦеныНоменклатуры) — это другая база.
+4. **Обязательно** заверши \`fs_write\` path \`data/map.md\` (полный Markdown). Не заканчивай текстом без записи файла.
+5. Если шагов мало — запиши карту с частью объектов (\`used: no\` для непроверенных), но **файл должен быть записан**.`;
 
 async function runMapBuilderSubagent(opts = {}) {
   const skill = await invoke1cTool('fs_read', { path: 'skills/config-map.md' });
@@ -5501,10 +5572,14 @@ async function runMapBuilderSubagent(opts = {}) {
   const cfgSyn = session.ok ? session.result.configurationSynonym : '';
   let system = skill.ok ? skill.result.content : 'Построй data/map.md для конфигурации 1С.';
   system += `\n\n## Текущий сеанс\n\nconfigurationName: ${cfgName}\nconfigurationSynonym: ${cfgSyn}\n\nОбязательно сохрани итог через fs_write path \`data/map.md\` (полный Markdown с frontmatter).`;
+  system += MAP_BUILDER_SYSTEM_APPEND;
+  if (/Небольшой|УправлениеНебольшой/i.test(cfgName)) {
+    system += `\n\nПодсказка УНФ: начни inspect_metadata с типовых имён — РегистрНакопления.Запасы, РегистрНакопления.ДенежныеСредства, РегистрНакопления.РасчетыСПокупателями, РегистрНакопления.РасчетыСПоставщиками, РегистрНакопления.Продажи (если есть).`;
+  }
   const userTask = opts.task
-    || 'Построй карту data/map.md: frontmatter, ## Topics, ## Objects (used yes/no), ## Flows. Проверь регистры inspect_metadata и run_query ПЕРВЫЕ 1.';
+    || 'Построй data/map.md для текущей конфигурации: frontmatter из session_now, ## Topics, ## Objects (used yes/no), ## Flows. Сначала inspect_metadata, потом run_query ПЕРВЫЕ 1, в конце fs_write полного файла.';
   try {
-    const turn = await runAgentTurn({
+    let turn = await runAgentTurn({
       messages: [{ role: 'system', content: system }, { role: 'user', content: userTask }],
       tools: MAP_BUILDER_TOOLS,
       maxToolSteps: MAP_BUILDER_MAX_STEPS,
@@ -5513,7 +5588,32 @@ async function runMapBuilderSubagent(opts = {}) {
       onToolEvent: opts.onToolEvent,
     });
     invalidateConfigMapCache();
-    const check = await ensureConfigMap({ force: true });
+    let check = await ensureConfigMap({ force: true });
+    if (check.status !== 'ok') {
+      turn = await runAgentTurn({
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: userTask },
+          { role: 'assistant', content: turn.content || 'Первая попытка без fs_write.' },
+          {
+            role: 'user',
+            content: 'Файл data/map.md не прошёл проверку или не записан. Сейчас только fs_write: сохрани полный Markdown (frontmatter version 1, configurationName из сеанса, ## Topics, ## Objects, ## Flows). Можно used:no для объектов без успешного run_query.',
+          },
+        ],
+        tools: MAP_BUILDER_TOOLS,
+        maxToolSteps: 8,
+        temperature: 0.1,
+        signal: opts.signal,
+        onToolEvent: opts.onToolEvent,
+      });
+      invalidateConfigMapCache();
+      check = await ensureConfigMap({ force: true });
+    }
+    if (check.status !== 'ok') {
+      await writeFallbackConfigMap(session.ok ? session.result : {});
+      invalidateConfigMapCache();
+      check = await ensureConfigMap({ force: true });
+    }
     const ok = check.status === 'ok';
     return {
       ok,
@@ -5521,6 +5621,7 @@ async function runMapBuilderSubagent(opts = {}) {
         summary: turn.content,
         mapStatus: check.status,
         mapMessage: check.message,
+        fallbackMap: check.status === 'ok' && !String(turn.content || '').includes('fs_write'),
       },
       error: ok ? undefined : (check.message || 'Карта после сборки не прошла проверку'),
     };
