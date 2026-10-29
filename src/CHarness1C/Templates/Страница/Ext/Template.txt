@@ -876,6 +876,20 @@ body {
   color: #6b1020;
 }
 
+.kb-map-build-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.kb-map-build-actions .btn {
+  border-radius: 999px;
+  padding: 0.35rem 1rem;
+  font-size: 0.875rem;
+}
+
 .kb-msg-label {
   font-size: 0.68rem;
   font-weight: 700;
@@ -5065,11 +5079,11 @@ async function runExploreDataSubagent(task, opts) {
   let system = await ensureDataExplorerPrompt();
   const mapState = await ensureConfigMap();
   if (mapState.promptBlock && mapState.status === 'ok') {
-    system += `\n\n## Карта data/map.json\n\n${mapState.promptBlock}`;
+    system += `\n\n## Карта data/map.md\n\n${mapState.promptBlock}`;
   } else if (mapState.status === 'mismatch') {
-    system += `\n\n## Карта data/map.json\n\n${mapState.message} Объекты карты проверяй через inspect_metadata.`;
+    system += `\n\n## Карта data/map.md\n\n${mapState.message} Объекты карты проверяй через inspect_metadata.`;
   } else if (mapState.status === 'missing' || mapState.status === 'invalid') {
-    system += `\n\n## Карта data/map.json\n\n${mapState.message || 'Карта недоступна.'} Ищи регистры через inspect_metadata.`;
+    system += `\n\n## Карта data/map.md\n\n${mapState.message || 'Карта недоступна.'} Ищи регистры через inspect_metadata.`;
   }
   try {
     const turn = await runAgentTurn({
@@ -5358,54 +5372,57 @@ const workspaceConfigReady = ensureWorkspaceConfigLoaded();
 
 let cachedSystemPrompt = null;
 
-const CONFIG_MAP_PATH = 'data/map.json';
+const CONFIG_MAP_PATH = 'data/map.md';
 let cachedConfigMapState = null;
 
-function validateConfigMapStructure(raw) {
+function parseConfigMapFrontmatter(md) {
+  const text = String(md || '').replace(/^\uFEFF/, '');
+  if (!text.startsWith('---')) {
+    return { frontmatter: {}, body: text };
+  }
+  const end = text.indexOf('\n---', 3);
+  if (end < 0) {
+    return { frontmatter: {}, body: text };
+  }
+  const fmBlock = text.slice(3, end).trim();
+  const body = text.slice(end + 4).replace(/^\s*\n/, '');
+  const frontmatter = {};
+  for (const line of fmBlock.split('\n')) {
+    const match = line.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
+    if (match) frontmatter[match[1]] = match[2].trim();
+  }
+  return { frontmatter, body };
+}
+
+function validateConfigMapMarkdown(parsed) {
   const errors = [];
-  if (!raw || typeof raw !== 'object') errors.push('корень не объект');
-  if (raw.version !== 1) errors.push('version должна быть 1');
-  if (!raw.configuration?.name) errors.push('нет configuration.name');
-  if (!Array.isArray(raw.objects)) errors.push('objects не массив');
-  if (!Array.isArray(raw.flows)) errors.push('flows не массив');
+  const version = parsed.frontmatter.version;
+  if (version !== 1 && version !== '1') errors.push('version должна быть 1');
+  if (!parsed.frontmatter.configurationName) errors.push('нет configurationName в frontmatter');
+  if (!parsed.body.includes('## Topics') && !parsed.body.includes('## Objects')) {
+    errors.push('нет разделов ## Topics / ## Objects');
+  }
   return errors;
 }
 
-function formatConfigMapForPrompt(map) {
-  const lines = [];
-  lines.push(`Конфигурация: ${map.configuration.name}${map.configuration.synonym ? ` (${map.configuration.synonym})` : ''}`);
-  if (map.notes) lines.push(String(map.notes));
-  if (map.topics && typeof map.topics === 'object') {
-    lines.push('Темы:');
-    for (const [key, topic] of Object.entries(map.topics)) {
-      const hint = topic.objects?.length
-        ? topic.objects.join(', ')
-        : (topic.description || '—');
-      lines.push(`- ${key} (${topic.label || key}): ${hint}`);
-    }
-  }
-  const usedObjects = (map.objects || []).filter((o) => o.used !== false);
-  lines.push(`Объекты (used=${usedObjects.length}):`);
-  for (const obj of usedObjects.slice(0, 24)) {
-    let line = `- ${obj.fullName}`;
-    const qh = obj.queryHints || {};
-    if (qh.turnovers) line += ` → ${qh.turnovers}`;
-    else if (qh.slice) line += ` → ${qh.slice}`;
-    else if (qh.list) line += ` → ${qh.list}`;
-    lines.push(line);
-  }
-  if ((map.flows || []).length) {
-    lines.push('Связи (flows):');
-    for (const flow of map.flows.slice(0, 16)) {
-      lines.push(`- ${flow.from} → ${flow.to} (${flow.on}): ${flow.effect}`);
-    }
-  }
-  const text = lines.join('\n');
-  return text.length > 6000 ? `${text.slice(0, 5997)}…` : text;
+function formatConfigMapForPrompt(parsed) {
+  const name = parsed.frontmatter.configurationName;
+  const syn = parsed.frontmatter.configurationSynonym;
+  let block = `configurationName: ${name}${syn ? ` (${syn})` : ''}\n\n${parsed.body.trim()}`;
+  return block.length > 6000 ? `${block.slice(0, 5997)}…` : block;
 }
 
-async function ensureConfigMap() {
-  if (cachedConfigMapState) return cachedConfigMapState;
+function countUsedObjectsInMapBody(body) {
+  const matches = body.match(/- used:\s*yes/gi);
+  return matches ? matches.length : 0;
+}
+
+function invalidateConfigMapCache() {
+  cachedConfigMapState = null;
+}
+
+async function ensureConfigMap(options = {}) {
+  if (!options.force && cachedConfigMapState) return cachedConfigMapState;
   const state = {
     status: 'missing',
     map: null,
@@ -5415,35 +5432,35 @@ async function ensureConfigMap() {
   };
   const out = await invoke1cTool('fs_read', { path: CONFIG_MAP_PATH });
   if (!out.ok) {
-    state.message = 'Карта data/map.json не найдена — см. skills/config-map.md.';
+    state.message = 'Карта data/map.md не найдена.';
     cachedConfigMapState = state;
     return state;
   }
-  let map;
-  try {
-    map = JSON.parse(out.result.content);
-  } catch {
-    state.status = 'invalid';
-    state.message = 'data/map.json: неверный JSON.';
-    cachedConfigMapState = state;
-    return state;
-  }
-  const structureErrors = validateConfigMapStructure(map);
+  const parsed = parseConfigMapFrontmatter(out.result.content);
+  const structureErrors = validateConfigMapMarkdown(parsed);
   if (structureErrors.length) {
     state.status = 'invalid';
-    state.message = `data/map.json: ${structureErrors.join('; ')}`;
+    state.message = `data/map.md: ${structureErrors.join('; ')}`;
     cachedConfigMapState = state;
     return state;
   }
+  const map = {
+    configuration: {
+      name: parsed.frontmatter.configurationName,
+      synonym: parsed.frontmatter.configurationSynonym || '',
+    },
+    frontmatter: parsed.frontmatter,
+    body: parsed.body,
+  };
   state.map = map;
-  state.promptBlock = formatConfigMapForPrompt(map);
+  state.promptBlock = formatConfigMapForPrompt(parsed);
   if (isReal1CBridge()) {
     const sessionInfo = await invoke1cTool('session_now', {});
     if (sessionInfo.ok && sessionInfo.result?.configurationName) {
       state.sessionConfiguration = sessionInfo.result.configurationName;
       if (sessionInfo.result.configurationName !== map.configuration.name) {
         state.status = 'mismatch';
-        state.message = `Карта для «${map.configuration.name}», в сеансе «${sessionInfo.result.configurationName}». Обновите data/map.json (skills/config-map.md).`;
+        state.message = `Карта для «${map.configuration.name}», в сеансе «${sessionInfo.result.configurationName}».`;
         cachedConfigMapState = state;
         return state;
       }
@@ -5451,10 +5468,57 @@ async function ensureConfigMap() {
   }
   state.status = 'ok';
   state.level = 'info';
-  const usedCount = (map.objects || []).filter((o) => o.used !== false).length;
-  state.message = `Карта данных: ${map.configuration.name}, объектов ${usedCount}.`;
+  const usedCount = countUsedObjectsInMapBody(parsed.body);
+  state.message = `Карта данных: ${map.configuration.name}, объектов used: yes — ${usedCount}.`;
   cachedConfigMapState = state;
   return state;
+}
+
+const MAP_BUILDER_TOOL_NAMES = new Set([
+  'session_now',
+  'inspect_metadata',
+  'run_query',
+  'fs_read',
+  'fs_write',
+  'fs_search',
+]);
+const MAP_BUILDER_TOOLS = HARNESS_OPENAI_TOOLS.filter((t) => MAP_BUILDER_TOOL_NAMES.has(t.function.name));
+const MAP_BUILDER_MAX_STEPS = 14;
+
+async function runMapBuilderSubagent(opts = {}) {
+  const skill = await invoke1cTool('fs_read', { path: 'skills/config-map.md' });
+  const session = await invoke1cTool('session_now', {});
+  const cfgName = session.ok ? session.result.configurationName : '';
+  const cfgSyn = session.ok ? session.result.configurationSynonym : '';
+  let system = skill.ok ? skill.result.content : 'Построй data/map.md для конфигурации 1С.';
+  system += `\n\n## Текущий сеанс\n\nconfigurationName: ${cfgName}\nconfigurationSynonym: ${cfgSyn}\n\nОбязательно сохрани итог через fs_write path \`data/map.md\` (полный Markdown с frontmatter).`;
+  const userTask = opts.task
+    || 'Построй карту data/map.md: frontmatter, ## Topics, ## Objects (used yes/no), ## Flows. Проверь регистры inspect_metadata и run_query ПЕРВЫЕ 1.';
+  try {
+    const turn = await runAgentTurn({
+      messages: [{ role: 'system', content: system }, { role: 'user', content: userTask }],
+      tools: MAP_BUILDER_TOOLS,
+      maxToolSteps: MAP_BUILDER_MAX_STEPS,
+      temperature: 0.2,
+      signal: opts.signal,
+      onToolEvent: opts.onToolEvent,
+    });
+    invalidateConfigMapCache();
+    const check = await ensureConfigMap({ force: true });
+    const ok = check.status === 'ok';
+    return {
+      ok,
+      result: {
+        summary: turn.content,
+        mapStatus: check.status,
+        mapMessage: check.message,
+      },
+      error: ok ? undefined : (check.message || 'Карта после сборки не прошла проверку'),
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: msg };
+  }
 }
 
 function harnessAgentEnabled() {
@@ -5515,6 +5579,8 @@ window.HarnessAgent = {
   invoke1cTool,
   ensureSystemPrompt,
   ensureConfigMap,
+  invalidateConfigMapCache,
+  runMapBuilderSubagent,
   CONFIG_MAP_PATH,
 };
 
@@ -5699,14 +5765,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             configureMarked();
             initContextMeterTooltip();
             const cfg = window.HarnessAgent?.getAgentConfig?.();
-            let statusText = `Агент: ${cfg?.model || 'gemma4:31b-cloud'} (OpenAI API), инструменты → мост 1С.`;
-            if (harnessAgentMode() && typeof isReal1CBridge === 'function' && isReal1CBridge() && window.HarnessAgent?.ensureConfigMap) {
-                try {
-                    const mapState = await window.HarnessAgent.ensureConfigMap();
-                    if (mapState?.message) statusText = `${statusText} ${mapState.message}`;
-                } catch (_) { /* карта необязательна для UI */ }
-            }
-            showStatus(statusText, 'info');
+            showStatus(`Агент: ${cfg?.model || 'gemma4:31b-cloud'} (OpenAI API), инструменты → мост 1С.`, 'info');
             const demoMode = isDemoMode();
             if (demoMode) seedDemoSessionsIfNeeded();
             try {
@@ -6002,7 +6061,14 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             };
             elements.sendButton.addEventListener('mousedown', activateSend);
             elements.sendButton.addEventListener('click', activateSend);
-            elements.newChatBtn.addEventListener('click', () => startNewSession());
+            elements.newChatBtn.addEventListener('click', () => { startNewSession(); });
+            elements.chatContainer.addEventListener('click', (event) => {
+                const btn = event.target.closest('[data-harness-action]');
+                if (!btn) return;
+                const action = btn.dataset.harnessAction;
+                if (action === 'map-build-yes') handleMapBuildYes();
+                if (action === 'map-build-no') handleMapBuildNo();
+            });
             if (elements.paletteSelect) {
                 elements.paletteSelect.addEventListener('change', () => {
                     setPalette(elements.paletteSelect.value);
@@ -6478,6 +6544,76 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
                 }, 4000);
             }
         }
+        let mapBuildRunning = false;
+
+        function findMapBuildOfferMessage() {
+            return chatHistory.find((m) => m.harnessInteractive?.type === 'mapBuild' && m.harnessInteractive.phase === 'offer');
+        }
+
+        async function offerMapBuildIfNeeded() {
+            if (!harnessAgentMode() || typeof isReal1CBridge !== 'function' || !isReal1CBridge()) return;
+            if (!window.HarnessAgent?.ensureConfigMap) return;
+            window.HarnessAgent.invalidateConfigMapCache?.();
+            const mapState = await window.HarnessAgent.ensureConfigMap();
+            if (mapState.status === 'ok') return;
+            const mapName = mapState.map?.configuration?.name;
+            const reason = mapState.status === 'mismatch'
+                ? `Карта описывает **${mapName || 'другую'}** конфигурацию, в сеансе **${mapState.sessionConfiguration || '?'}**.`
+                : 'Нет актуальной карты **data/map.md** (файл отсутствует или повреждён).';
+            chatHistory.push({
+                role: 'model',
+                content: `${reason}\n\nПостроить карту данных для текущей базы? Субагент пройдёт по метаданным и сохранит Markdown в \`data/map.md\`.`,
+                id: `msg-${messageCounter++}`,
+                harnessInteractive: { type: 'mapBuild', phase: 'offer' },
+            });
+            persistCurrentSession();
+            renderChatHistory();
+        }
+
+        async function handleMapBuildYes() {
+            if (mapBuildRunning) return;
+            const offer = findMapBuildOfferMessage();
+            if (!offer || !window.HarnessAgent?.runMapBuilderSubagent) return;
+            mapBuildRunning = true;
+            offer.harnessInteractive.phase = 'building';
+            renderChatHistory();
+            elements.chatInput.disabled = true;
+            showLoading(true, 'Сборка карты…');
+            try {
+                const result = await window.HarnessAgent.runMapBuilderSubagent({
+                    onToolEvent(ev) {
+                        if (ev.phase === 'start' && ev.name) showLoading(true, `Карта: ${ev.name}…`);
+                    },
+                });
+                offer.harnessInteractive.phase = result.ok ? 'done' : 'failed';
+                const reply = result.ok
+                    ? (result.result?.summary || result.result?.mapMessage || 'Карта data/map.md сохранена.')
+                    : `Не удалось построить карту: ${result.error || 'ошибка'}`;
+                chatHistory.push({
+                    role: 'model',
+                    content: reply,
+                    id: `msg-${messageCounter++}`,
+                });
+                persistCurrentSession();
+                renderChatHistory();
+                showStatus(result.ok ? 'Карта data/map.md готова.' : 'Ошибка сборки карты.', result.ok ? 'success' : 'danger');
+            } finally {
+                mapBuildRunning = false;
+                showLoading(false);
+                elements.chatInput.disabled = false;
+                elements.chatInput.focus();
+            }
+        }
+
+        function handleMapBuildNo() {
+            const offer = findMapBuildOfferMessage();
+            if (!offer) return;
+            offer.harnessInteractive.phase = 'declined';
+            offer.content += '\n\nХорошо. Карту можно построить позже через «Новый диалог» или попросив обновить `data/map.md`.';
+            persistCurrentSession();
+            renderChatHistory();
+        }
+
         function createMessageElement(message) {
             const messageWrapper = document.createElement('div');
             const roleClass = message.role === 'user' ? 'kb-msg--user' : 'kb-msg--assistant';
@@ -6488,8 +6624,25 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             const bodyClass = message.role === 'model' ? 'kb-msg-body kb-msg-body--md' : 'kb-msg-body';
             messageWrapper.innerHTML = `<div class="kb-msg-label">${label}</div><div class="${bodyClass}"></div>`;
             const bodyElement = messageWrapper.querySelector('.kb-msg-body');
-            if (message.role === 'model' && message.content) {
-                bodyElement.innerHTML = marked.parse(message.content);
+            if (message.role === 'model') {
+                bodyElement.innerHTML = marked.parse(message.content || '_(пустой ответ)_');
+                if (message.harnessInteractive?.type === 'mapBuild') {
+                    const actions = document.createElement('div');
+                    actions.className = 'kb-map-build-actions';
+                    const phase = message.harnessInteractive.phase;
+                    if (phase === 'offer') {
+                        actions.innerHTML = '<button type="button" class="btn btn-primary btn-sm" data-harness-action="map-build-yes">Да</button><button type="button" class="btn btn-outline-secondary btn-sm" data-harness-action="map-build-no">Нет</button>';
+                    } else if (phase === 'building') {
+                        actions.innerHTML = '<span class="text-muted">Сборка карты…</span>';
+                    } else if (phase === 'declined') {
+                        actions.innerHTML = '<span class="text-muted">Отложено</span>';
+                    } else if (phase === 'done') {
+                        actions.innerHTML = '<span class="text-muted">Карта сохранена</span>';
+                    } else if (phase === 'failed') {
+                        actions.innerHTML = '<span class="text-muted">Ошибка сборки</span>';
+                    }
+                    messageWrapper.appendChild(actions);
+                }
                 requestAnimationFrame(() => {
                     addCodeActionsToBubble(bodyElement);
                     initHarnessCharts(bodyElement);
@@ -6662,7 +6815,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
                 elements.sessionsList.appendChild(item);
             });
         }
-        function startNewSession() {
+        async function startNewSession() {
             if (currentAbortController) currentAbortController.abort();
             chatHistory = [];
             currentSessionId = null;
@@ -6674,6 +6827,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             populateSessions();
             updateComposeContext();
             elements.chatInput.focus();
+            await offerMapBuildIfNeeded();
         }
         function handleLoadSession(sessionId) {
             if (sessionId === currentSessionId) return;

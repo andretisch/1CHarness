@@ -4,7 +4,7 @@
   "agents/default.md",
   "agents/data-explorer.md",
   "data/sample.txt",
-  "data/map.json",
+  "data/map.md",
   "skills/query.md",
   "skills/config-map.md",
   "sessions/.gitkeep"
