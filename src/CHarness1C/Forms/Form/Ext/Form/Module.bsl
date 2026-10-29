@@ -25,7 +25,12 @@
 	Попытка
 		Обработка = РеквизитФормыВЗначение("Объект");
 		Текст = Обработка.ПолучитьМакет("Страница").ПолучитьТекст();
-		Текст = СтрЗаменить(Текст, "<head>", "<head><script>window.__1CHarnessBackend=true;setInterval(function(){var el=document.getElementById('harness-1c-result');if(!el)return;var raw=el.textContent||el.innerText||el.getAttribute('data-payload')||'';if(!raw)return;el.textContent='';try{el.setAttribute('data-payload','');}catch(e){}if(window.harnessDeliverResponse){try{window.harnessDeliverResponse(raw);}catch(e){}}},200);</script>");
+		КлючLLM = ПрочитатьКлючLLMДляСтраницы();
+		ФрагментКлюча = "";
+		Если Не ПустаяСтрока(КлючLLM) Тогда
+			ФрагментКлюча = "window.__HARNESS_LLM_API_KEY=" + ВJSON(КлючLLM) + ";";
+		КонецЕсли;
+		Текст = СтрЗаменить(Текст, "<head>", "<head><script>window.__1CHarnessBackend=true;" + ФрагментКлюча + "setInterval(function(){var el=document.getElementById('harness-1c-result');if(!el)return;var raw=el.textContent||el.innerText||el.getAttribute('data-payload')||'';if(!raw)return;el.textContent='';try{el.setAttribute('data-payload','');}catch(e){}if(window.harnessDeliverResponse){try{window.harnessDeliverResponse(raw);}catch(e){}}},200);</script>");
 		Текст = СтрЗаменить(Текст, "<body>", "<body><div id=""harness-1c-result"" hidden></div>");
 		ИмяФайла = ПолучитьИмяВременногоФайла("html");
 		ПолучитьДвоичныеДанныеИзСтроки(Текст, КодировкаТекста.UTF8, Ложь).Записать(ИмяФайла);
@@ -197,7 +202,11 @@
 		Возврат ВJSON(Ответ);
 	Исключение
 		ТекстОшибки = КраткоеПредставлениеОшибки(ИнформацияОбОшибке());
-		Зафиксировать("ошибка " + Имя + ": " + Лев(ТекстОшибки, 300));
+		Если Имя = "fs_read" И СтрНайти(НРег(ТекстОшибки), "не обнаружен") > 0 Тогда
+			Зафиксировать("fs_read отсутствует: " + Лев(ТекстОшибки, 200));
+		Иначе
+			Зафиксировать("ошибка " + Имя + ": " + Лев(ТекстОшибки, 300));
+		КонецЕсли;
 		Возврат ОтветОшибки(Ид, ТекстОшибки);
 	КонецПопытки;
 КонецФункции
@@ -415,8 +424,26 @@
 КонецФункции
 
 &НаСервере
+Функция ПрочитатьКлючLLMДляСтраницы()
+	// В git не хранится: workspace/llm-api-key.local (одна строка — ключ Ollama/OpenAI).
+	Путь = КореньФайлов() + "/llm-api-key.local";
+	ФайлКлюча = Новый Файл(Путь);
+	Если Не ФайлКлюча.Существует() Тогда
+		Возврат "";
+	КонецЕсли;
+	Чтение = Новый ЧтениеТекста(Путь, КодировкаТекста.UTF8);
+	Ключ = СокрЛП(Чтение.Прочитать());
+	Чтение.Закрыть();
+	Возврат Ключ;
+КонецФункции
+
+&НаСервере
 Функция ПрочитатьФайл(Относительный)
 	Путь = ПолныйПуть(Относительный);
+	ФайлНаДиске = Новый Файл(Путь);
+	Если Не ФайлНаДиске.Существует() Тогда
+		ВызватьИсключение "Файл не обнаружен '" + Путь + "'";
+	КонецЕсли;
 	Чтение = Новый ЧтениеТекста(Путь, КодировкаТекста.UTF8);
 	Содержимое = Чтение.Прочитать();
 	Чтение.Закрыть();

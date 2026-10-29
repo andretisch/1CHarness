@@ -17,6 +17,9 @@ workspace/sessions/*.json
 # Карта конфигурации собирается субагентом в базе (data/map.md)
 workspace/data/map.md
 
+# Ключ LLM для поля HTML 1С (одна строка; не коммитить)
+workspace/llm-api-key.local
+
 **/__pycache__/
 *.pyc
 
