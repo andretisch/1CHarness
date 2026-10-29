@@ -4581,6 +4581,19 @@ async function writeConfigFile() {
   if (!out.ok) throw new Error(out.error || 'Не удалось записать config.json');
 }
 
+const LLM_API_KEY_LOCAL_PATH = 'llm-api-key.local';
+
+/** В 1С: ключ из workspace/llm-api-key.local (без пересборки EPF под BSL-инъекцию). */
+async function bootstrapLlmApiKeyFromLocalFile() {
+  if (!isReal1CBridge() || cache?.connection?.apiKey) return false;
+  const keyOut = await invoke1cTool('fs_read', { path: LLM_API_KEY_LOCAL_PATH });
+  if (!keyOut.ok) return false;
+  const key = String(keyOut.result?.content ?? '').replace(/^\uFEFF/, '').trim();
+  if (!key) return false;
+  cache.connection.apiKey = key;
+  return true;
+}
+
 async function loadWorkspaceConfig() {
   const out = await invoke1cTool('fs_read', { path: CONFIG_PATH });
   if (out.ok) {
@@ -4593,8 +4606,14 @@ async function loadWorkspaceConfig() {
     cache = mergeConfig(null);
   }
   cache.connection.apiBase = normalizeApiBase(cache.connection.apiBase);
+  let keyFromFile = false;
+  try {
+    keyFromFile = await bootstrapLlmApiKeyFromLocalFile();
+  } catch {
+    /* мост ещё не готов — ключ только из config / настроек */
+  }
   const devBootstrap = bootstrapFromDevEnv();
-  if (!out.ok || devBootstrap) {
+  if (!out.ok || devBootstrap || keyFromFile) {
     try {
       await writeConfigFile();
     } catch {
