@@ -5513,6 +5513,121 @@ const MAP_BUILDER_TOOL_NAMES = new Set([
 const MAP_BUILDER_TOOLS = HARNESS_OPENAI_TOOLS.filter((t) => MAP_BUILDER_TOOL_NAMES.has(t.function.name));
 const MAP_BUILDER_MAX_STEPS = 24;
 
+const UNF_TOPIC_LABELS = {
+  money: 'Деньги',
+  inventory: 'Склад',
+  receivables: 'Дебиторская задолженность',
+  payables: 'Кредиторская задолженность',
+  sales: 'Продажи',
+};
+
+const UNF_REGISTER_CANDIDATES = [
+  { name: 'РегистрНакопления.ДенежныеСредства', topics: ['money'] },
+  { name: 'РегистрНакопления.Запасы', topics: ['inventory'] },
+  { name: 'РегистрНакопления.РасчетыСПокупателями', topics: ['receivables'] },
+  { name: 'РегистрНакопления.РасчетыСПоставщиками', topics: ['payables'] },
+  { name: 'РегистрНакопления.Продажи', topics: ['sales'] },
+  { name: 'РегистрНакопления.ЗапасыНаСкладах', topics: ['inventory'] },
+];
+
+function isUnfLikeConfiguration(configurationName) {
+  return /Небольшой|УправлениеНебольшой|УНФ/i.test(String(configurationName || ''));
+}
+
+function resourceNamesFromInspect(result) {
+  return (result?.resources || [])
+    .map((r) => (typeof r === 'string' ? r : r?.name))
+    .filter(Boolean);
+}
+
+function pickProbeField(resourceNames) {
+  const prefer = ['СуммаОстаток', 'КоличествоОстаток', 'Сумма', 'СуммаВал', 'Количество'];
+  for (const p of prefer) {
+    if (resourceNames.includes(p)) return p;
+  }
+  return resourceNames[0] || '';
+}
+
+async function probeRegisterForMap(fullName) {
+  const meta = await invoke1cTool('inspect_metadata', { name: fullName });
+  if (!meta.ok) return null;
+  const resources = resourceNamesFromInspect(meta.result);
+  const field = pickProbeField(resources);
+  if (!field) {
+    return { fullName, used: false, query: '', inspect: meta.result };
+  }
+  const candidates = [
+    `ВЫБРАТЬ ПЕРВЫЕ 1 ${field} ИЗ ${fullName}.Остатки`,
+    `ВЫБРАТЬ ПЕРВЫЕ 1 ${field}Оборот ИЗ ${fullName}.Обороты`,
+    `ВЫБРАТЬ ПЕРВЫЕ 1 ${field}Приход ИЗ ${fullName}.Обороты`,
+  ];
+  for (const query of candidates) {
+    const rq = await invoke1cTool('run_query', { query, limit: 1 });
+    if (rq.ok) return { fullName, used: true, query, inspect: meta.result };
+  }
+  return { fullName, used: false, query: candidates[0], inspect: meta.result };
+}
+
+function formatVerifiedUnfMapMarkdown(sessionResult, probes) {
+  const cfgName = String(sessionResult?.configurationName || 'Unknown').trim();
+  const cfgSyn = String(sessionResult?.configurationSynonym || '').trim();
+  const today = new Date().toISOString().slice(0, 10);
+  const topicToObjects = new Map();
+  for (const p of probes) {
+    if (!p) continue;
+    const cand = UNF_REGISTER_CANDIDATES.find((c) => c.name === p.fullName);
+    const topics = cand?.topics || ['inventory'];
+    for (const t of topics) {
+      if (!topicToObjects.has(t)) topicToObjects.set(t, []);
+      if (!topicToObjects.get(t).includes(p.fullName)) topicToObjects.get(t).push(p.fullName);
+    }
+  }
+  let body = '# Карта данных конфигурации\n\nСборка с проверкой `inspect_metadata` + `run_query` (УНФ).\n\n## Topics\n\n';
+  for (const [topicId, label] of Object.entries(UNF_TOPIC_LABELS)) {
+    const objs = topicToObjects.get(topicId);
+    if (!objs?.length) {
+      body += `### ${topicId} — ${label}\n- note: регистр не найден или не проверен\n\n`;
+      continue;
+    }
+    body += `### ${topicId} — ${label}\n- objects: ${objs.join(', ')}\n\n`;
+  }
+  body += '## Objects\n\n';
+  for (const p of probes) {
+    if (!p) continue;
+    const cand = UNF_REGISTER_CANDIDATES.find((c) => c.name === p.fullName);
+    body += `### ${p.fullName}\n- used: ${p.used ? 'yes' : 'no'}\n- topics: ${(cand?.topics || []).join(', ')}\n`;
+    if (p.query) body += `- query: \`${p.query}\`\n`;
+    body += '\n';
+  }
+  body += `## Flows
+
+| From | To | On | Effect |
+|------|-----|-----|--------|
+| Документ.РеализацияТоваровУслуг | РегистрНакопления.Продажи | Проведение | Обороты продаж |
+| Документ.ПоступлениеТоваровУслуг | РегистрНакопления.Запасы | Проведение | Оприходование |
+| Документ.ПоступлениеНаСчет | РегистрНакопления.ДенежныеСредства | Проведение | Приход ДС |
+`;
+  return `---
+version: 1
+configurationName: ${cfgName}
+configurationSynonym: ${cfgSyn}
+updatedAt: ${today}
+---
+
+${body}`;
+}
+
+async function buildUnfVerifiedMap(sessionResult) {
+  const probes = [];
+  for (const cand of UNF_REGISTER_CANDIDATES) {
+    probes.push(await probeRegisterForMap(cand.name));
+  }
+  const verified = probes.filter((p) => p && p.used);
+  const content = formatVerifiedUnfMapMarkdown(sessionResult, probes.filter(Boolean));
+  const out = await invoke1cTool('fs_write', { path: CONFIG_MAP_PATH, content });
+  return { out, verifiedCount: verified.length, probes };
+}
+
 async function writeFallbackConfigMap(sessionResult) {
   const name = String(sessionResult?.configurationName || 'Unknown').trim();
   const syn = String(sessionResult?.configurationSynonym || '').trim();
@@ -5610,9 +5725,20 @@ async function runMapBuilderSubagent(opts = {}) {
       check = await ensureConfigMap({ force: true });
     }
     if (check.status !== 'ok') {
-      await writeFallbackConfigMap(session.ok ? session.result : {});
+      if (isUnfLikeConfiguration(cfgName)) {
+        await buildUnfVerifiedMap(session.ok ? session.result : {});
+      } else {
+        await writeFallbackConfigMap(session.ok ? session.result : {});
+      }
       invalidateConfigMapCache();
       check = await ensureConfigMap({ force: true });
+    } else if (isUnfLikeConfiguration(cfgName)) {
+      const usedCount = countUsedObjectsInMapBody(check.map?.body || '');
+      if (usedCount === 0) {
+        await buildUnfVerifiedMap(session.ok ? session.result : {});
+        invalidateConfigMapCache();
+        check = await ensureConfigMap({ force: true });
+      }
     }
     const ok = check.status === 'ok';
     return {
