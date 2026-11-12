@@ -2786,7 +2786,7 @@ code.hljs {
                             <div class="mb-3">
                                 <label for="llmApiKey" class="form-label">API-ключ (Bearer)</label>
                                 <input type="password" class="form-control" id="llmApiKey" autocomplete="off" placeholder="Ollama Cloud — ключ с ollama.com">
-                                <div class="form-text">Файл <code>config.json</code> в рабочей области агента (через мост 1С). В dev ключ может подставиться из <code>OLLAMA_API_KEY</code>.</div>
+                                <div id="llmApiKeyHint" class="form-text">Файл <code>config.json</code> в рабочей области (мост 1С). Пустое поле + «Сохранить» — ключ не трогаем. В Cloud Agent: <code>OLLAMA_API_KEY</code> в секретах окружения.</div>
                             </div>
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="anonymizeBeforeLlm" checked>
@@ -5987,6 +5987,25 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             if (elements.sidebarCollapsedPref) elements.sidebarCollapsedPref.checked = collapsed;
             setSidebarCollapsed(collapsed);
         }
+        const LLM_API_KEY_MASK = '••••••••';
+
+        function refreshLlmApiKeyFieldUi(apiKey) {
+            const key = String(apiKey || '').trim();
+            const hint = document.getElementById('llmApiKeyHint');
+            if (elements.llmApiKey) {
+                elements.llmApiKey.value = '';
+                elements.llmApiKey.placeholder = key
+                    ? `Ключ задан (${key.length} симв.) — введите новый, чтобы заменить`
+                    : 'Ollama Cloud — ключ с ollama.com';
+            }
+            if (hint) {
+                const base = 'Хранится в <code>config.json</code>. Пустое поле при сохранении — оставить текущий ключ.';
+                hint.innerHTML = key
+                    ? `${base} Сейчас: <strong>${key.length} символов</strong> (в поле не показываем).`
+                    : `${base} Ключ не задан.`;
+            }
+        }
+
         async function loadAgentConnectionSettings() {
             if (!harnessAgentMode() || !window.HarnessAgent?.workspaceConfigReady) return;
             await window.HarnessAgent.workspaceConfigReady;
@@ -5994,7 +6013,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             if (elements.openAiBaseUrl) elements.openAiBaseUrl.value = c.apiBase || 'https://ollama.com/v1';
             if (elements.openAiModel) elements.openAiModel.value = c.model || 'gemma4:31b-cloud';
             if (elements.llmApiStyle) elements.llmApiStyle.value = c.apiStyle || 'openai';
-            if (elements.llmApiKey) elements.llmApiKey.value = c.apiKey ? '••••••••' : '';
+            refreshLlmApiKeyFieldUi(c.apiKey);
             if (elements.anonymizeBeforeLlm) elements.anonymizeBeforeLlm.checked = c.anonymize !== false;
             updateComposeContext();
         }
@@ -6006,10 +6025,10 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
                 model: elements.openAiModel?.value.trim(),
             };
             const keyInput = elements.llmApiKey?.value?.trim();
-            if (keyInput && keyInput !== '••••••••') patch.apiKey = keyInput;
+            if (keyInput && keyInput !== LLM_API_KEY_MASK) patch.apiKey = keyInput;
             if (elements.anonymizeBeforeLlm) patch.anonymize = elements.anonymizeBeforeLlm.checked;
             await window.HarnessAgent.updateConnectionSettings(patch);
-            if (elements.llmApiKey && patch.apiKey) elements.llmApiKey.value = '••••••••';
+            refreshLlmApiKeyFieldUi(window.HarnessAgent.getConnectionSettings().apiKey);
             updateComposeContext();
         }
         function harnessAgentMode() {
