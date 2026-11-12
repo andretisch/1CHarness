@@ -4681,6 +4681,10 @@ function formatLlmClientError(err) {
     return 'Не авторизовано (HTTP 401): укажите API-ключ в настройках LLM (шестерёнка → API Key) '
       + 'или положите ключ одной строкой в `workspace/llm-api-key.local` и перезапустите обработку в 1С.';
   }
+  if (/HTTP\s*402\b/i.test(msg) || /Payment Required|credits|subscribe/i.test(msg)) {
+    return 'Нет кредитов у провайдера LLM (HTTP 402). Пополните баланс Ollama Cloud или смените apiBase/модель; '
+      + 'карта может быть записана в упрощённом виде без вызова модели.';
+  }
   return msg.length > 600 ? `${msg.slice(0, 597)}…` : msg;
 }
 
@@ -5752,6 +5756,28 @@ async function runMapBuilderSubagent(opts = {}) {
       error: ok ? undefined : (check.message || 'Карта после сборки не прошла проверку'),
     };
   } catch (e) {
+    try {
+      if (isUnfLikeConfiguration(cfgName)) {
+        await buildUnfVerifiedMap(session.ok ? session.result : {});
+      } else {
+        await writeFallbackConfigMap(session.ok ? session.result : {});
+      }
+      invalidateConfigMapCache();
+      const check = await ensureConfigMap({ force: true });
+      if (check.status === 'ok') {
+        return {
+          ok: true,
+          result: {
+            summary: `Карта записана без LLM (${formatLlmClientError(e)})`,
+            mapStatus: check.status,
+            mapMessage: check.message,
+            fallbackMap: true,
+          },
+        };
+      }
+    } catch {
+      /* ignore */
+    }
     return { ok: false, error: formatLlmClientError(e) };
   }
 }
