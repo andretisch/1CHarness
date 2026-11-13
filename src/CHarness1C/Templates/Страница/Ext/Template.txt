@@ -5030,7 +5030,9 @@ async function executeToolCall(tc) {
   } catch {
     return { ok: false, error: 'Некорректные arguments JSON' };
   }
-  return invoke1cTool(fn.name, args);
+  const slowTools = new Set(['report_compose', 'report_describe']);
+  const timeoutMs = slowTools.has(fn.name) ? 120000 : undefined;
+  return invoke1cTool(fn.name, args, timeoutMs ? { timeoutMs } : {});
 }
 
 function compactRowForTrace(row) {
