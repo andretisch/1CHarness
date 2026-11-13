@@ -5827,6 +5827,7 @@ async function runHarnessAgentTurn(p) {
 }
 
 window.HarnessAgent = {
+  isReal1CBridge,
   enabled: harnessAgentEnabled,
   getAgentConfig,
   workspaceConfigReady,
@@ -6422,6 +6423,15 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             elements.fileInput.addEventListener('change', handleFileSelection);
             elements.stagedFilesArea.addEventListener('click', handleRemoveStagedFile);
             elements.chatContainer.addEventListener('click', function(event) {
+                const navLink = event.target.closest('a[href]');
+                if (navLink && harnessIn1cBackend() && isE1cNavigationHref(navLink.getAttribute('href'))) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openE1cNavigationLink(navLink.getAttribute('href')).catch((e) => {
+                        showStatus(e.message || 'Не удалось открыть в 1С', 'danger');
+                    });
+                    return;
+                }
                 if (event.target.classList.contains('copy-code-button')) handleCopyCodeClick(event.target);
                 else if (event.target.classList.contains('download-code-button')) handleDownloadCodeClick(event.target);
             });
@@ -6439,7 +6449,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
                     const sessionId = row.dataset.sessionId;
                     const action = actionBtn.dataset.sessionAction;
                     if (action === 'rename') handleRenameSession(sessionId);
-                    else if (action === 'delete') handleDeleteSession(sessionId);
+                    else if (action === 'delete') void handleDeleteSession(sessionId);
                     return;
                 }
                 const menuBtn = event.target.closest('.kb-sess-menu-btn');
@@ -6905,7 +6915,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             messageWrapper.innerHTML = `<div class="kb-msg-label">${label}</div><div class="${bodyClass}"></div>`;
             const bodyElement = messageWrapper.querySelector('.kb-msg-body');
             if (message.role === 'model') {
-                bodyElement.innerHTML = marked.parse(message.content || '_(пустой ответ)_');
+                bodyElement.innerHTML = formatModelBubbleHtml(message.content, false);
                 if (message.harnessInteractive?.type === 'mapBuild') {
                     const actions = document.createElement('div');
                     actions.className = 'kb-map-build-actions';
@@ -6947,7 +6957,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             const messageDiv = document.querySelector(`.kb-msg[data-message-id="${messageId}"][data-role="model"] .kb-msg-body`);
             if (!messageDiv) return;
             destroyHarnessCharts(messageDiv);
-            messageDiv.innerHTML = marked.parse(newContent || (isStreamingUpdate ? "" : "_(пустой ответ)_"));
+            messageDiv.innerHTML = formatModelBubbleHtml(newContent, isStreamingUpdate);
             addCodeActionsToBubble(messageDiv);
             initHarnessCharts(messageDiv);
             if (isStreamingUpdate) scrollToBottom();
@@ -6994,6 +7004,26 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
         }
         function escapeHtml(unsafe) {
             return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+        function harnessIn1cBackend() {
+            return window.__1CHarnessBackend === true
+                || new URLSearchParams(window.location.search).get('backend') === '1c';
+        }
+        function isE1cNavigationHref(href) {
+            if (!href) return false;
+            const h = String(href).trim();
+            return /^e1cib[:/]/i.test(h) || /^v8doc:/i.test(h);
+        }
+        async function openE1cNavigationLink(url) {
+            if (!window.HarnessAgent?.invoke1cTool) throw new Error('Мост 1С недоступен');
+            const out = await window.HarnessAgent.invoke1cTool('open_navlink', { url }, { timeoutMs: 20000 });
+            if (!out.ok) throw new Error(out.error || 'Не удалось открыть в 1С');
+            showStatus('Открыто в окне 1С.', 'success');
+        }
+        function formatModelBubbleHtml(content, isStreamingUpdate) {
+            if (content && String(content).trim()) return marked.parse(content);
+            if (isStreamingUpdate) return '';
+            return '<p class="kb-thinking text-muted">Думаю…</p>';
         }
         function scrollToBottom() {
             elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
@@ -7138,13 +7168,20 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             populateSessions();
             showStatus('Чат переименован.', 'success');
         }
-        function handleDeleteSession(sessionId) {
+        async function handleDeleteSession(sessionId) {
             const sessions = getSessionIndex();
             const session = sessions.find(s => s.id === sessionId);
             if (!session || !confirm(`Удалить «${session.name}»? Это нельзя отменить.`)) return;
             localStorage.removeItem(`${SESSION_DATA_PREFIX}${sessionId}`);
             saveSessionIndex(sessions.filter(s => s.id !== sessionId));
-            if (currentSessionId === sessionId) startNewSession();
+            if (harnessAgentMode() && window.HarnessAgent?.invoke1cTool) {
+                try {
+                    await window.HarnessAgent.invoke1cTool('fs_delete', { path: `sessions/${sessionId}.json` });
+                } catch {
+                    /* файл на диске мог уже отсутствовать */
+                }
+            }
+            if (currentSessionId === sessionId) await startNewSession();
             else populateSessions();
             showStatus(`«${session.name}» удалён.`, 'info');
         }
