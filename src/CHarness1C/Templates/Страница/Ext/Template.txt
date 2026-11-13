@@ -2786,7 +2786,7 @@ code.hljs {
                             <div class="mb-3">
                                 <label for="llmApiKey" class="form-label">API-ключ (Bearer)</label>
                                 <input type="password" class="form-control" id="llmApiKey" autocomplete="off" placeholder="Ollama Cloud — ключ с ollama.com">
-                                <div class="form-text">Файл <code>config.json</code> в рабочей области агента (через мост 1С). В dev ключ может подставиться из <code>OLLAMA_API_KEY</code>.</div>
+                                <div id="llmApiKeyHint" class="form-text">Файл <code>config.json</code> в рабочей области (мост 1С). Пустое поле + «Сохранить» — ключ не трогаем. В Cloud Agent: <code>OLLAMA_API_KEY</code> в секретах окружения.</div>
                             </div>
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="anonymizeBeforeLlm" checked>
@@ -4208,8 +4208,8 @@ const HARNESS_OPENAI_TOOLS = [
   fn('inspect_metadata', 'Структура объекта метаданных. Только сеанс 1С.', {
     name: str('Имя объекта метаданных'),
   }, ['name']),
-  fn('read_object', 'Карточка объекта по ссылке {type, uuid}. Только сеанс 1С.', {
-    ref: { type: 'object', description: '{ type, uuid }' },
+  fn('read_object', 'Карточка объекта: ref как {type, uuid} из run_query, или {url} из make_navlink, или строка e1cib. Только сеанс 1С.', {
+    ref: { type: 'object', description: '{ type, uuid } или { url } или строка e1cib' },
   }, ['ref']),
   fn('make_navlink', 'Навигационная ссылка объекта. Только сеанс 1С.', {
     ref: { type: 'object', description: '{ type, uuid }' },
@@ -4680,6 +4680,10 @@ function formatLlmClientError(err) {
   if (/HTTP\s*401\b/i.test(msg) || /Unauthorized/i.test(msg)) {
     return 'Не авторизовано (HTTP 401): укажите API-ключ в настройках LLM (шестерёнка → API Key) '
       + 'или положите ключ одной строкой в `workspace/llm-api-key.local` и перезапустите обработку в 1С.';
+  }
+  if (/HTTP\s*402\b/i.test(msg) || /Payment Required|credits|subscribe/i.test(msg)) {
+    return 'Нет кредитов у провайдера LLM (HTTP 402). Пополните баланс Ollama Cloud или смените apiBase/модель; '
+      + 'карта может быть записана в упрощённом виде без вызова модели.';
   }
   return msg.length > 600 ? `${msg.slice(0, 597)}…` : msg;
 }
@@ -5752,6 +5756,28 @@ async function runMapBuilderSubagent(opts = {}) {
       error: ok ? undefined : (check.message || 'Карта после сборки не прошла проверку'),
     };
   } catch (e) {
+    try {
+      if (isUnfLikeConfiguration(cfgName)) {
+        await buildUnfVerifiedMap(session.ok ? session.result : {});
+      } else {
+        await writeFallbackConfigMap(session.ok ? session.result : {});
+      }
+      invalidateConfigMapCache();
+      const check = await ensureConfigMap({ force: true });
+      if (check.status === 'ok') {
+        return {
+          ok: true,
+          result: {
+            summary: `Карта записана без LLM (${formatLlmClientError(e)})`,
+            mapStatus: check.status,
+            mapMessage: check.message,
+            fallbackMap: true,
+          },
+        };
+      }
+    } catch {
+      /* ignore */
+    }
     return { ok: false, error: formatLlmClientError(e) };
   }
 }
@@ -5801,6 +5827,7 @@ async function runHarnessAgentTurn(p) {
 }
 
 window.HarnessAgent = {
+  isReal1CBridge,
   enabled: harnessAgentEnabled,
   getAgentConfig,
   workspaceConfigReady,
@@ -5961,6 +5988,25 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             if (elements.sidebarCollapsedPref) elements.sidebarCollapsedPref.checked = collapsed;
             setSidebarCollapsed(collapsed);
         }
+        const LLM_API_KEY_MASK = '••••••••';
+
+        function refreshLlmApiKeyFieldUi(apiKey) {
+            const key = String(apiKey || '').trim();
+            const hint = document.getElementById('llmApiKeyHint');
+            if (elements.llmApiKey) {
+                elements.llmApiKey.value = '';
+                elements.llmApiKey.placeholder = key
+                    ? `Ключ задан (${key.length} симв.) — введите новый, чтобы заменить`
+                    : 'Ollama Cloud — ключ с ollama.com';
+            }
+            if (hint) {
+                const base = 'Хранится в <code>config.json</code>. Пустое поле при сохранении — оставить текущий ключ.';
+                hint.innerHTML = key
+                    ? `${base} Сейчас: <strong>${key.length} символов</strong> (в поле не показываем).`
+                    : `${base} Ключ не задан.`;
+            }
+        }
+
         async function loadAgentConnectionSettings() {
             if (!harnessAgentMode() || !window.HarnessAgent?.workspaceConfigReady) return;
             await window.HarnessAgent.workspaceConfigReady;
@@ -5968,7 +6014,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             if (elements.openAiBaseUrl) elements.openAiBaseUrl.value = c.apiBase || 'https://ollama.com/v1';
             if (elements.openAiModel) elements.openAiModel.value = c.model || 'gemma4:31b-cloud';
             if (elements.llmApiStyle) elements.llmApiStyle.value = c.apiStyle || 'openai';
-            if (elements.llmApiKey) elements.llmApiKey.value = c.apiKey ? '••••••••' : '';
+            refreshLlmApiKeyFieldUi(c.apiKey);
             if (elements.anonymizeBeforeLlm) elements.anonymizeBeforeLlm.checked = c.anonymize !== false;
             updateComposeContext();
         }
@@ -5980,10 +6026,10 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
                 model: elements.openAiModel?.value.trim(),
             };
             const keyInput = elements.llmApiKey?.value?.trim();
-            if (keyInput && keyInput !== '••••••••') patch.apiKey = keyInput;
+            if (keyInput && keyInput !== LLM_API_KEY_MASK) patch.apiKey = keyInput;
             if (elements.anonymizeBeforeLlm) patch.anonymize = elements.anonymizeBeforeLlm.checked;
             await window.HarnessAgent.updateConnectionSettings(patch);
-            if (elements.llmApiKey && patch.apiKey) elements.llmApiKey.value = '••••••••';
+            refreshLlmApiKeyFieldUi(window.HarnessAgent.getConnectionSettings().apiKey);
             updateComposeContext();
         }
         function harnessAgentMode() {
@@ -6377,6 +6423,15 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             elements.fileInput.addEventListener('change', handleFileSelection);
             elements.stagedFilesArea.addEventListener('click', handleRemoveStagedFile);
             elements.chatContainer.addEventListener('click', function(event) {
+                const navLink = event.target.closest('a[href]');
+                if (navLink && harnessIn1cBackend() && isE1cNavigationHref(navLink.getAttribute('href'))) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openE1cNavigationLink(navLink.getAttribute('href')).catch((e) => {
+                        showStatus(e.message || 'Не удалось открыть в 1С', 'danger');
+                    });
+                    return;
+                }
                 if (event.target.classList.contains('copy-code-button')) handleCopyCodeClick(event.target);
                 else if (event.target.classList.contains('download-code-button')) handleDownloadCodeClick(event.target);
             });
@@ -6394,7 +6449,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
                     const sessionId = row.dataset.sessionId;
                     const action = actionBtn.dataset.sessionAction;
                     if (action === 'rename') handleRenameSession(sessionId);
-                    else if (action === 'delete') handleDeleteSession(sessionId);
+                    else if (action === 'delete') void handleDeleteSession(sessionId);
                     return;
                 }
                 const menuBtn = event.target.closest('.kb-sess-menu-btn');
@@ -6860,7 +6915,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             messageWrapper.innerHTML = `<div class="kb-msg-label">${label}</div><div class="${bodyClass}"></div>`;
             const bodyElement = messageWrapper.querySelector('.kb-msg-body');
             if (message.role === 'model') {
-                bodyElement.innerHTML = marked.parse(message.content || '_(пустой ответ)_');
+                bodyElement.innerHTML = formatModelBubbleHtml(message.content, false);
                 if (message.harnessInteractive?.type === 'mapBuild') {
                     const actions = document.createElement('div');
                     actions.className = 'kb-map-build-actions';
@@ -6902,7 +6957,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             const messageDiv = document.querySelector(`.kb-msg[data-message-id="${messageId}"][data-role="model"] .kb-msg-body`);
             if (!messageDiv) return;
             destroyHarnessCharts(messageDiv);
-            messageDiv.innerHTML = marked.parse(newContent || (isStreamingUpdate ? "" : "_(пустой ответ)_"));
+            messageDiv.innerHTML = formatModelBubbleHtml(newContent, isStreamingUpdate);
             addCodeActionsToBubble(messageDiv);
             initHarnessCharts(messageDiv);
             if (isStreamingUpdate) scrollToBottom();
@@ -6949,6 +7004,26 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
         }
         function escapeHtml(unsafe) {
             return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+        function harnessIn1cBackend() {
+            return window.__1CHarnessBackend === true
+                || new URLSearchParams(window.location.search).get('backend') === '1c';
+        }
+        function isE1cNavigationHref(href) {
+            if (!href) return false;
+            const h = String(href).trim();
+            return /^e1cib[:/]/i.test(h) || /^v8doc:/i.test(h);
+        }
+        async function openE1cNavigationLink(url) {
+            if (!window.HarnessAgent?.invoke1cTool) throw new Error('Мост 1С недоступен');
+            const out = await window.HarnessAgent.invoke1cTool('open_navlink', { url }, { timeoutMs: 20000 });
+            if (!out.ok) throw new Error(out.error || 'Не удалось открыть в 1С');
+            showStatus('Открыто в окне 1С.', 'success');
+        }
+        function formatModelBubbleHtml(content, isStreamingUpdate) {
+            if (content && String(content).trim()) return marked.parse(content);
+            if (isStreamingUpdate) return '';
+            return '<p class="kb-thinking text-muted">Думаю…</p>';
         }
         function scrollToBottom() {
             elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
@@ -7093,13 +7168,20 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             populateSessions();
             showStatus('Чат переименован.', 'success');
         }
-        function handleDeleteSession(sessionId) {
+        async function handleDeleteSession(sessionId) {
             const sessions = getSessionIndex();
             const session = sessions.find(s => s.id === sessionId);
             if (!session || !confirm(`Удалить «${session.name}»? Это нельзя отменить.`)) return;
             localStorage.removeItem(`${SESSION_DATA_PREFIX}${sessionId}`);
             saveSessionIndex(sessions.filter(s => s.id !== sessionId));
-            if (currentSessionId === sessionId) startNewSession();
+            if (harnessAgentMode() && window.HarnessAgent?.invoke1cTool) {
+                try {
+                    await window.HarnessAgent.invoke1cTool('fs_delete', { path: `sessions/${sessionId}.json` });
+                } catch {
+                    /* файл на диске мог уже отсутствовать */
+                }
+            }
+            if (currentSessionId === sessionId) await startNewSession();
             else populateSessions();
             showStatus(`«${session.name}» удалён.`, 'info');
         }
