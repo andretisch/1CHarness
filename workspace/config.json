@@ -1,9 +1,9 @@
-{
+﻿{
   "connection": {
-    "apiBase": "https://ollama.com/v1",
+    "apiBase": "https://gptunnel.ru/v1",
     "apiStyle": "openai",
-    "model": "gemma4:31b-cloud",
-    "apiKey": "",
+    "model": "qwen3.8-max",
+    "apiKey": "shds-HrM3qUgufj1LVfUiht5x9AuXVXC",
     "anonymize": true
   },
   "generation": {

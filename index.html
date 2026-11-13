@@ -4230,8 +4230,20 @@ const HARNESS_OPENAI_TOOLS = [
     name: str('Вариант отчёта'),
     period: str('Период, необязательно'),
   }, ['name']),
-  fn('report_compose', 'Универсальный отчёт БСП и открытие формы. Только сеанс 1С.', {
-    task: str('Что показать в отчёте'),
+  fn('report_compose', 'Универсальный отчёт БСП (УНФ/ЗУП/БП): открыть форму в 1С с пресетом; пользователь донастраивает отборы/И/ИЛИ и сохраняет вариант. Авто-поиск Отчет.УниверсальныйОтчет или консоли запросов.', {
+    task: str('Что показать (если нет preset.query)'),
+    report: str('Подсказка имени отчёта, необязательно'),
+    preset: {
+      type: 'object',
+      description: 'metadata, query (вложенные запросы, И/ИЛИ, арифметика в языке запросов), period {from,to}, title, variant',
+      properties: {
+        metadata: str('Объект метаданных, напр. РегистрНакопления.Продажи'),
+        query: str('Текст запроса 1С'),
+        period: { type: 'object', properties: { from: str('yyyy-MM-dd'), to: str('yyyy-MM-dd') } },
+        title: str('Заголовок отчёта'),
+        variant: str('Имя варианта БСП, необязательно'),
+      },
+    },
   }, ['task']),
   fn('open_draft', 'Открыть форму нового документа или элемента без записи. Только сеанс 1С.', {
     type: str('Тип метаданных, например Документ.Реализация'),
@@ -5018,7 +5030,9 @@ async function executeToolCall(tc) {
   } catch {
     return { ok: false, error: 'Некорректные arguments JSON' };
   }
-  return invoke1cTool(fn.name, args);
+  const slowTools = new Set(['report_compose', 'report_describe']);
+  const timeoutMs = slowTools.has(fn.name) ? 120000 : undefined;
+  return invoke1cTool(fn.name, args, timeoutMs ? { timeoutMs } : {});
 }
 
 function compactRowForTrace(row) {
