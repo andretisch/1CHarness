@@ -4208,8 +4208,8 @@ const HARNESS_OPENAI_TOOLS = [
   fn('inspect_metadata', 'Структура объекта метаданных. Только сеанс 1С.', {
     name: str('Имя объекта метаданных'),
   }, ['name']),
-  fn('read_object', 'Карточка объекта по ссылке {type, uuid}. Только сеанс 1С.', {
-    ref: { type: 'object', description: '{ type, uuid }' },
+  fn('read_object', 'Карточка объекта: ref как {type, uuid} из run_query, или {url} из make_navlink, или строка e1cib. Только сеанс 1С.', {
+    ref: { type: 'object', description: '{ type, uuid } или { url } или строка e1cib' },
   }, ['ref']),
   fn('make_navlink', 'Навигационная ссылка объекта. Только сеанс 1С.', {
     ref: { type: 'object', description: '{ type, uuid }' },
