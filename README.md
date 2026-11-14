@@ -81,3 +81,5 @@ bash scripts/update-after-pull.sh
 - `session_now`, `calc`, `find_in_chat`, `find_skill`, `draw_chart`
 
 Скриншоты отдельных инструментов: [`docs/images/tools/`](docs/images/tools/).
+
+Статья для Хабра (черновик): [`docs/habr/article-1charness.md`](docs/habr/article-1charness.md), HTML — [`docs/habr/article-1charness.html`](docs/habr/article-1charness.html).
