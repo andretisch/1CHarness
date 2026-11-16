@@ -890,6 +890,38 @@ body {
   font-size: 0.875rem;
 }
 
+.kb-onboarding {
+  max-width: 42rem;
+  margin: 0 auto 1rem;
+}
+
+.kb-onboarding-steps {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.kb-onboarding-steps .badge {
+  font-weight: 600;
+}
+
+.kb-onboarding-panel {
+  display: none;
+}
+
+.kb-onboarding-panel.active {
+  display: block;
+}
+
+.kb-onboarding-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .kb-msg-label {
   font-size: 0.68rem;
   font-weight: 700;
@@ -2768,9 +2800,18 @@ code.hljs {
                     <div class="tab-content pt-3">
                         <div class="tab-pane fade show active" id="tab-connection" role="tabpanel">
                             <div class="mb-3">
+                                <label for="llmProviderPreset" class="form-label">Провайдер LLM</label>
+                                <select class="form-select" id="llmProviderPreset">
+                                    <option value="gptunnel" selected>GPTunnel</option>
+                                    <option value="ollama">Ollama Cloud</option>
+                                    <option value="custom">Свой (OpenAI-compatible)</option>
+                                </select>
+                                <div class="form-text">Для GPTunnel базовый URL подставляется автоматически; нужен только API-ключ.</div>
+                            </div>
+                            <div class="mb-3" id="llmCustomBaseRow">
                                 <label for="openAiBaseUrl" class="form-label">Базовый URL API</label>
-                                <input type="url" class="form-control" id="openAiBaseUrl" placeholder="https://ollama.com/v1" value="https://ollama.com/v1">
-                                <div class="form-text">Прямой XHR, без прокси. Ollama Cloud: <code>https://ollama.com/v1</code> + путь <code>/v1/chat/completions</code> или стиль Ollama <code>/api/chat</code>.</div>
+                                <input type="url" class="form-control" id="openAiBaseUrl" placeholder="https://gptunnel.ru/v1" value="https://gptunnel.ru/v1">
+                                <div class="form-text">Прямой XHR. GPTunnel: <code>https://gptunnel.ru/v1</code>. Ollama Cloud: <code>https://ollama.com/v1</code>.</div>
                             </div>
                             <div class="mb-3">
                                 <label for="llmApiStyle" class="form-label">Стиль API</label>
@@ -2781,12 +2822,19 @@ code.hljs {
                             </div>
                             <div class="mb-3">
                                 <label for="openAiModel" class="form-label">Модель</label>
-                                <input type="text" class="form-control" id="openAiModel" value="gemma4:31b-cloud">
+                                <div class="input-group mb-2">
+                                    <select class="form-select" id="openAiModelSelect" aria-label="Модель из списка провайдера">
+                                        <option value="">— загрузите список —</option>
+                                    </select>
+                                    <button type="button" class="btn btn-outline-secondary" id="refreshModelsBtn" title="Запросить /v1/models">Обновить</button>
+                                </div>
+                                <input type="text" class="form-control" id="openAiModel" value="qwen3-8b" placeholder="id модели">
+                                <div class="form-text">Список моделей — по API-ключу и базовому URL. Можно ввести id вручную.</div>
                             </div>
                             <div class="mb-3">
                                 <label for="llmApiKey" class="form-label">API-ключ (Bearer)</label>
-                                <input type="password" class="form-control" id="llmApiKey" autocomplete="off" placeholder="Ollama Cloud — ключ с ollama.com">
-                                <div id="llmApiKeyHint" class="form-text">Файл <code>config.json</code> в рабочей области (мост 1С). Пустое поле + «Сохранить» — ключ не трогаем. В Cloud Agent: <code>OLLAMA_API_KEY</code> в секретах окружения.</div>
+                                <input type="password" class="form-control" id="llmApiKey" autocomplete="off" placeholder="Ключ GPTunnel или другого провайдера">
+                                <div id="llmApiKeyHint" class="form-text">Файл <code>config.json</code> в рабочей области (мост 1С). Пустое поле + «Сохранить» — ключ не трогаем.</div>
                             </div>
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="anonymizeBeforeLlm" checked>
@@ -4148,7 +4196,7 @@ return He}()
 //# sourceMappingURL=bootstrap.bundle.min.js.map
 </script>
 <script>
-window.__HARNESS_DISK = {"config.json": "{\n  \"connection\": {\n    \"apiBase\": \"https://ollama.com/v1\",\n    \"apiStyle\": \"openai\",\n    \"model\": \"gemma4:31b-cloud\",\n    \"apiKey\": \"\"\n  },\n  \"generation\": {\n    \"temperature\": 0.4\n  }\n}\n", "manifest.json": "[\n  \"config.json\",\n  \"manifest.json\",\n  \"agents/default.md\",\n  \"data/sample.txt\",\n  \"skills/query.md\",\n  \"sessions/.gitkeep\"\n]\n", "agents/default.md": "# 1СХарнесс — агент по умолчанию\n\nТы помощник на платформе 1С:Предприятие. Отвечай по-русски, кратко и по делу.\n\n## Инструменты\n\nФайлы только внутри workspace, через инструменты:\n\n- `fs_list`, `fs_read`, `fs_write`\n- `session_now` — дата сеанса\n- `calc` — арифметика\n- `find_in_chat` — поиск по сохранённым диалогам\n- `find_skill` — playbook в `skills/` и `agents/`\n- `draw_chart` — график bar, line или hbar\n\nЗапросы к базе, метаданные, отчёты и формы (`run_query`, `inspect_metadata`, `read_object`, `make_navlink`, `sketch_query`, `delegate_task`, `report_describe`, `report_run`, `report_compose`, `open_draft`) выполняются только в сеансе 1С. Не выдумывай строки выборки и не пиши в информационную базу.\n\nНе выдумывай содержимое файлов: если нужны данные — вызови инструмент.\n", "data/sample.txt": "Демо-файл для инструмента read_file.\nОбороты по счёту 51 за март 2026 — заглушка 1С.\n", "skills/query.md": "# Эскиз запроса\n\nКогда пользователь просит выборку из базы, не выдумывай результат.\n\n1. Уточни объект, период и измерения.\n2. Вызови `sketch_query` с формулировкой задачи.\n3. Текст запроса выполняет только `run_query` в сеансе 1С.\n4. Ссылки передавай как `{ \"type\", \"uuid\" }`.\n", "sessions/.gitkeep": ""};
+window.__HARNESS_DISK = {"config.json": "{\n  \"connection\": {\n    \"provider\": \"gptunnel\",\n    \"apiBase\": \"https://gptunnel.ru/v1\",\n    \"apiStyle\": \"openai\",\n    \"model\": \"qwen3-8b\",\n    \"apiKey\": \"\",\n    \"anonymize\": true\n  },\n  \"generation\": {\n    \"temperature\": 0.4\n  },\n  \"setup\": {\n    \"complete\": false\n  }\n}\n", "manifest.json": "[\n  \"config.json\",\n  \"manifest.json\",\n  \"agents/default.md\",\n  \"data/sample.txt\",\n  \"skills/query.md\",\n  \"sessions/.gitkeep\"\n]\n", "agents/default.md": "# 1СХарнесс — агент по умолчанию\n\nТы помощник на платформе 1С:Предприятие. Отвечай по-русски, кратко и по делу.\n\n## Инструменты\n\nФайлы только внутри workspace, через инструменты:\n\n- `fs_list`, `fs_read`, `fs_write`\n- `session_now` — дата сеанса\n- `calc` — арифметика\n- `find_in_chat` — поиск по сохранённым диалогам\n- `find_skill` — playbook в `skills/` и `agents/`\n- `draw_chart` — график bar, line или hbar\n\nЗапросы к базе, метаданные, отчёты и формы (`run_query`, `inspect_metadata`, `read_object`, `make_navlink`, `sketch_query`, `delegate_task`, `report_describe`, `report_run`, `report_compose`, `open_draft`) выполняются только в сеансе 1С. Не выдумывай строки выборки и не пиши в информационную базу.\n\nНе выдумывай содержимое файлов: если нужны данные — вызови инструмент.\n", "data/sample.txt": "Демо-файл для инструмента read_file.\nОбороты по счёту 51 за март 2026 — заглушка 1С.\n", "skills/query.md": "# Эскиз запроса\n\nКогда пользователь просит выборку из базы, не выдумывай результат.\n\n1. Уточни объект, период и измерения.\n2. Вызови `sketch_query` с формулировкой задачи.\n3. Текст запроса выполняет только `run_query` в сеансе 1С.\n4. Ссылки передавай как `{ \"type\", \"uuid\" }`.\n", "sessions/.gitkeep": ""}
 </script>
 <script>
 /** Схемы инструментов по ТЗ 1СХарнесс (OpenAI tools). */
@@ -4348,6 +4396,29 @@ function excerpt(text, query) {
 async function executeHarnessTool(name, args, fs) {
   args = args || {};
   const tool = ALIASES[name] || name;
+  if (tool === 'harness_workspace_info') {
+    const defaultRoot = (typeof window !== 'undefined' && window.__HARNESS_WORKSPACE_DEFAULT)
+      || '~/1CHarness';
+    const root = (typeof window !== 'undefined' && window.__HARNESS_WORKSPACE_ROOT)
+      || (typeof localStorage !== 'undefined' ? localStorage.getItem('harness_workspace_root') : null)
+      || '/workspace/workspace';
+    return {
+      root,
+      defaultRoot,
+      bootstrapPath: (typeof window !== 'undefined' && window.__HARNESS_WORKSPACE_BOOTSTRAP) || '',
+    };
+  }
+  if (tool === 'harness_workspace_set') {
+    const p = String(args.path || '').trim();
+    if (!p) throw new Error('Пустой path');
+    if (typeof localStorage !== 'undefined') localStorage.setItem('harness_workspace_root', p);
+    if (typeof window !== 'undefined') window.__HARNESS_WORKSPACE_ROOT = p;
+    return {
+      root: p,
+      defaultRoot: (typeof window !== 'undefined' && window.__HARNESS_WORKSPACE_DEFAULT) || '~/1CHarness',
+      bootstrapPath: '',
+    };
+  }
   if (tool === 'read_agent_md') {
     const id = String(args.agent_id || 'default').trim();
     if (!/^[a-zA-Z0-9_-]+$/.test(id)) throw new Error('Недопустимый agent_id');
@@ -4539,16 +4610,50 @@ function wireHarnessDeliverResponse() {
 
 const CONFIG_PATH = 'config.json';
 
-const DEFAULT_CONFIG = {
-  connection: {
+/** Реферальная ссылка на регистрацию GPTunnel (можно заменить на свою). */
+const GPTUNNEL_REFERRAL_URL = 'https://gptunnel.ru/?ref=andretisch';
+
+const LLM_PROVIDER_PRESETS = {
+  gptunnel: {
+    id: 'gptunnel',
+    label: 'GPTunnel',
+    apiBase: 'https://gptunnel.ru/v1',
+    apiStyle: 'openai',
+    defaultModel: 'qwen3-8b',
+    referralUrl: GPTUNNEL_REFERRAL_URL,
+  },
+  ollama: {
+    id: 'ollama',
+    label: 'Ollama Cloud',
     apiBase: 'https://ollama.com/v1',
     apiStyle: 'openai',
-    model: 'gemma4:31b-cloud',
+    defaultModel: 'gemma3:27b',
+    referralUrl: 'https://ollama.com/',
+  },
+  custom: {
+    id: 'custom',
+    label: 'Свой провайдер',
+    apiBase: '',
+    apiStyle: 'openai',
+    defaultModel: '',
+    referralUrl: '',
+  },
+};
+
+const DEFAULT_CONFIG = {
+  connection: {
+    provider: 'gptunnel',
+    apiBase: 'https://gptunnel.ru/v1',
+    apiStyle: 'openai',
+    model: 'qwen3-8b',
     apiKey: '',
     anonymize: true,
   },
   generation: {
     temperature: 0.4,
+  },
+  setup: {
+    complete: false,
   },
 };
 
@@ -4560,7 +4665,44 @@ function mergeConfig(raw) {
   return {
     connection: { ...DEFAULT_CONFIG.connection, ...(parsed.connection || {}) },
     generation: { ...DEFAULT_CONFIG.generation, ...(parsed.generation || {}) },
+    setup: { ...DEFAULT_CONFIG.setup, ...(parsed.setup || {}) },
   };
+}
+
+function detectProviderFromConnection(conn) {
+  const explicit = String(conn?.provider || '').trim();
+  if (explicit && LLM_PROVIDER_PRESETS[explicit]) return explicit;
+  const base = String(conn?.apiBase || '');
+  if (/gptunnel\.ru/i.test(base)) return 'gptunnel';
+  if (/ollama\.com/i.test(base)) return 'ollama';
+  return 'custom';
+}
+
+function applyProviderPreset(providerId) {
+  const preset = LLM_PROVIDER_PRESETS[providerId] || LLM_PROVIDER_PRESETS.custom;
+  const current = cache?.connection || DEFAULT_CONFIG.connection;
+  return {
+    provider: preset.id,
+    apiBase: preset.apiBase || current.apiBase || DEFAULT_CONFIG.connection.apiBase,
+    apiStyle: preset.apiStyle || current.apiStyle || 'openai',
+    model: preset.defaultModel || current.model || DEFAULT_CONFIG.connection.model,
+  };
+}
+
+function needsFirstRunSetup() {
+  const c = getWorkspaceConfig();
+  if (c.setup?.complete) return false;
+  const key = String(c.connection?.apiKey || '').trim()
+    || (typeof window !== 'undefined' ? String(window.__HARNESS_LLM_API_KEY || '').trim() : '');
+  return !key;
+}
+
+async function completeFirstRunSetup(partial) {
+  if (!cache) await loadWorkspaceConfig();
+  cache.connection = { ...cache.connection, ...partial };
+  cache.setup = { ...(cache.setup || {}), complete: true };
+  await writeConfigFile();
+  return cache;
 }
 
 const DEV_PROXY_BASE_RE = /\/dev-llm\/|127\.0\.0\.1:\d+\/dev-llm/i;
@@ -4625,7 +4767,7 @@ async function loadWorkspaceConfig() {
     /* мост ещё не готов — ключ только из config / настроек */
   }
   const devBootstrap = bootstrapFromDevEnv();
-  if (!out.ok || devBootstrap || keyFromFile) {
+  if (out.ok && (devBootstrap || keyFromFile)) {
     try {
       await writeConfigFile();
     } catch {
@@ -4679,12 +4821,52 @@ const DEFAULT_TIMEOUT_MS = 300000;
 function getLlmSettings() {
   const c = getConnectionSettings();
   return {
-    apiBase: (c.apiBase || 'https://ollama.com/v1').replace(/\/+$/, ''),
+    apiBase: (c.apiBase || DEFAULT_CONFIG.connection.apiBase).replace(/\/+$/, ''),
     apiStyle: c.apiStyle === 'ollama' ? 'ollama' : 'openai',
-    model: c.model || 'gemma4:31b-cloud',
+    model: c.model || DEFAULT_CONFIG.connection.model,
     apiKey: c.apiKey || (typeof window !== 'undefined' && window.__HARNESS_LLM_API_KEY) || '',
     timeoutMs: DEFAULT_TIMEOUT_MS,
   };
+}
+
+/** @returns {Promise<{ models: string[], error?: string }>} */
+async function fetchLlmModels(apiBase, apiKey) {
+  const base = String(apiBase || DEFAULT_CONFIG.connection.apiBase).replace(/\/+$/, '');
+  const key = String(apiKey || '').trim()
+    || (typeof window !== 'undefined' ? String(window.__HARNESS_LLM_API_KEY || '').trim() : '');
+  const path = '/v1/models';
+  const url = resolveLlmPostUrl(base, path);
+  try {
+    const data = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', url);
+      xhr.timeout = 60000;
+      applyLlmAuthHeaders(xhr, key);
+      xhr.onload = () => {
+        if (xhr.status < 200 || xhr.status >= 300) {
+          reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText?.slice(0, 240) || xhr.statusText}`));
+          return;
+        }
+        try {
+          resolve(JSON.parse(xhr.responseText || '{}'));
+        } catch (e) {
+          reject(e);
+        }
+      };
+      xhr.onerror = () => reject(new Error('Сеть: не удалось получить список моделей'));
+      xhr.ontimeout = () => reject(new Error('Таймаут запроса /v1/models'));
+      xhr.send();
+    });
+    const raw = Array.isArray(data?.data) ? data.data : [];
+    const models = raw
+      .map((m) => (typeof m === 'string' ? m : m?.id))
+      .filter(Boolean)
+      .map(String)
+      .sort((a, b) => a.localeCompare(b, 'ru'));
+    return { models };
+  } catch (e) {
+    return { models: [], error: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 function formatLlmClientError(err) {
@@ -5849,6 +6031,13 @@ window.HarnessAgent = {
   getConnectionSettings,
   updateConnectionSettings,
   updateGenerationSettings,
+  needsFirstRunSetup,
+  completeFirstRunSetup,
+  fetchLlmModels,
+  LLM_PROVIDER_PRESETS,
+  GPTUNNEL_REFERRAL_URL,
+  detectProviderFromConnection,
+  applyProviderPreset,
   runHarnessAgentTurn,
   persistSessionJsonViaBridge,
   loadSessionJsonViaBridge,
@@ -5871,6 +6060,10 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
         const elements = {
             openAiBaseUrl: document.getElementById('openAiBaseUrl'),
             openAiModel: document.getElementById('openAiModel'),
+            openAiModelSelect: document.getElementById('openAiModelSelect'),
+            refreshModelsBtn: document.getElementById('refreshModelsBtn'),
+            llmProviderPreset: document.getElementById('llmProviderPreset'),
+            llmCustomBaseRow: document.getElementById('llmCustomBaseRow'),
             llmApiStyle: document.getElementById('llmApiStyle'),
             llmApiKey: document.getElementById('llmApiKey'),
             anonymizeBeforeLlm: document.getElementById('anonymizeBeforeLlm'),
@@ -5913,6 +6106,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
         let stagedFiles = [];
         let harnessHostResponseResolver = null;
         let openSessionMenuId = null;
+        let onboardingActive = false;
         function harnessBackendEnabled() {
             const params = new URLSearchParams(window.location.search);
             return params.get('backend') === '1c' || window.__1CHarnessBackend === true;
@@ -6021,12 +6215,70 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             }
         }
 
+        function updateLlmCustomBaseRowVisibility(providerId) {
+            if (!elements.llmCustomBaseRow) return;
+            const show = providerId === 'custom' || providerId === 'ollama';
+            elements.llmCustomBaseRow.hidden = !show;
+        }
+
+        function fillModelSelectOptions(modelIds, selected) {
+            if (!elements.openAiModelSelect) return;
+            const sel = String(selected || '').trim();
+            const opts = ['<option value="">— выберите модель —</option>'];
+            for (const id of modelIds) {
+                const esc = id.replace(/"/g, '&quot;');
+                const picked = id === sel ? ' selected' : '';
+                opts.push(`<option value="${esc}"${picked}>${esc}</option>`);
+            }
+            elements.openAiModelSelect.innerHTML = opts.join('');
+        }
+
+        async function refreshModelsInSettings() {
+            if (!window.HarnessAgent?.fetchLlmModels) return;
+            const base = elements.openAiBaseUrl?.value.trim()
+                || window.HarnessAgent.getConnectionSettings().apiBase;
+            const keyInput = elements.llmApiKey?.value?.trim();
+            const key = (keyInput && keyInput !== LLM_API_KEY_MASK)
+                ? keyInput
+                : window.HarnessAgent.getConnectionSettings().apiKey;
+            if (!String(key || '').trim()) {
+                showStatus('Укажите API-ключ, чтобы загрузить модели.', 'warning');
+                return;
+            }
+            if (elements.refreshModelsBtn) elements.refreshModelsBtn.disabled = true;
+            try {
+                const { models, error } = await window.HarnessAgent.fetchLlmModels(base, key);
+                if (error) showStatus(`Модели: ${error}`, 'warning');
+                else showStatus(`Загружено моделей: ${models.length}`, 'success');
+                fillModelSelectOptions(models, elements.openAiModel?.value);
+            } finally {
+                if (elements.refreshModelsBtn) elements.refreshModelsBtn.disabled = false;
+            }
+        }
+
+        async function applyProviderPresetToForm(providerId, persist) {
+            const presetPatch = window.HarnessAgent.applyProviderPreset(providerId);
+            if (elements.llmProviderPreset) elements.llmProviderPreset.value = providerId;
+            updateLlmCustomBaseRowVisibility(providerId);
+            if (elements.openAiBaseUrl && presetPatch.apiBase) {
+                elements.openAiBaseUrl.value = presetPatch.apiBase;
+            }
+            if (elements.llmApiStyle) elements.llmApiStyle.value = presetPatch.apiStyle || 'openai';
+            if (elements.openAiModel && presetPatch.model) elements.openAiModel.value = presetPatch.model;
+            if (persist && window.HarnessAgent?.updateConnectionSettings) {
+                await window.HarnessAgent.updateConnectionSettings(presetPatch);
+            }
+        }
+
         async function loadAgentConnectionSettings() {
             if (!harnessAgentMode() || !window.HarnessAgent?.workspaceConfigReady) return;
             await window.HarnessAgent.workspaceConfigReady;
             const c = window.HarnessAgent.getConnectionSettings();
-            if (elements.openAiBaseUrl) elements.openAiBaseUrl.value = c.apiBase || 'https://ollama.com/v1';
-            if (elements.openAiModel) elements.openAiModel.value = c.model || 'gemma4:31b-cloud';
+            const provider = window.HarnessAgent.detectProviderFromConnection(c);
+            if (elements.llmProviderPreset) elements.llmProviderPreset.value = provider;
+            updateLlmCustomBaseRowVisibility(provider);
+            if (elements.openAiBaseUrl) elements.openAiBaseUrl.value = c.apiBase || 'https://gptunnel.ru/v1';
+            if (elements.openAiModel) elements.openAiModel.value = c.model || 'qwen3-8b';
             if (elements.llmApiStyle) elements.llmApiStyle.value = c.apiStyle || 'openai';
             refreshLlmApiKeyFieldUi(c.apiKey);
             if (elements.anonymizeBeforeLlm) elements.anonymizeBeforeLlm.checked = c.anonymize !== false;
@@ -6034,7 +6286,9 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
         }
         async function saveAgentConnectionSettings() {
             if (!harnessAgentMode() || !window.HarnessAgent?.updateConnectionSettings) return;
+            const provider = elements.llmProviderPreset?.value || 'gptunnel';
             const patch = {
+                provider,
                 apiBase: elements.openAiBaseUrl?.value.trim(),
                 apiStyle: elements.llmApiStyle?.value,
                 model: elements.openAiModel?.value.trim(),
@@ -6045,6 +6299,281 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             await window.HarnessAgent.updateConnectionSettings(patch);
             refreshLlmApiKeyFieldUi(window.HarnessAgent.getConnectionSettings().apiKey);
             updateComposeContext();
+        }
+
+        const onboardingState = {
+            step: 1,
+            workspacePath: '',
+            provider: 'gptunnel',
+            apiKey: '',
+            model: 'qwen3-8b',
+            models: [],
+        };
+
+        function setComposeDisabledForOnboarding(disabled) {
+            onboardingActive = disabled;
+            if (elements.chatInput) {
+                elements.chatInput.disabled = disabled;
+                elements.chatInput.placeholder = disabled
+                    ? 'Завершите первичную настройку в мастере выше…'
+                    : 'Сообщение… (Enter — отправить, Shift+Enter — новая строка)';
+            }
+            updateSendButtonState();
+        }
+
+        function destroyOnboardingWizard() {
+            const el = document.getElementById('onboardingWizard');
+            if (el) el.remove();
+        }
+
+        function renderOnboardingWizard() {
+            destroyOnboardingWizard();
+            const wrap = document.createElement('div');
+            wrap.id = 'onboardingWizard';
+            wrap.className = 'kb-onboarding kb-msg kb-msg--assistant';
+            wrap.innerHTML = `
+                <div class="kb-msg-label">1СХарнесс — настройка</div>
+                <div class="kb-onboarding-steps" id="onboardingSteps"></div>
+                <div id="onboardingPanels"></div>
+            `;
+            if (chatHistory.length === 0 && elements.chatContainer.querySelector('.kb-empty-state')) {
+                elements.chatContainer.innerHTML = '';
+            }
+            elements.chatContainer.prepend(wrap);
+            renderOnboardingStep();
+        }
+
+        async function onboardingEnsureWorkspaceInfo() {
+            const out = await window.HarnessAgent.invoke1cTool('harness_workspace_info', {});
+            if (out.ok && out.result) return out.result;
+            return {
+                root: window.__HARNESS_WORKSPACE_ROOT || '/workspace/workspace',
+                defaultRoot: window.__HARNESS_WORKSPACE_DEFAULT || '~/1CHarness',
+            };
+        }
+
+        function onboardingStepLabels() {
+            return ['Папка', 'Провайдер', 'API-ключ', 'Модель', 'Готово'];
+        }
+
+        function renderOnboardingStep() {
+            const stepsEl = document.getElementById('onboardingSteps');
+            const panelsEl = document.getElementById('onboardingPanels');
+            if (!stepsEl || !panelsEl) return;
+            const labels = onboardingStepLabels();
+            stepsEl.innerHTML = labels.map((label, i) => {
+                const n = i + 1;
+                const cls = n === onboardingState.step ? 'text-bg-primary' : (n < onboardingState.step ? 'text-bg-secondary' : 'text-bg-light');
+                return `<span class="badge ${cls}">${n}. ${label}</span>`;
+            }).join('');
+            const presets = window.HarnessAgent.LLM_PROVIDER_PRESETS;
+            const gptRef = presets.gptunnel.referralUrl;
+            panelsEl.innerHTML = `
+                <div class="kb-onboarding-panel ${onboardingState.step === 1 ? 'active' : ''}" data-step="1">
+                    <p class="mb-2">Где хранить рабочую область (config.json, агенты, сессии)?</p>
+                    <p class="small text-muted mb-2" id="onboardingWorkspaceHint">Загрузка…</p>
+                    <input type="text" class="form-control form-control-sm mb-2" id="onboardingWorkspacePath" placeholder="Путь к папке">
+                    <div class="kb-onboarding-actions">
+                        <button type="button" class="btn btn-primary btn-sm" data-onboarding="workspace-default">По умолчанию</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-onboarding="workspace-next">Далее</button>
+                    </div>
+                </div>
+                <div class="kb-onboarding-panel ${onboardingState.step === 2 ? 'active' : ''}" data-step="2">
+                    <p class="mb-2">Провайдер LLM (по умолчанию — GPTunnel):</p>
+                    <select class="form-select form-select-sm mb-2" id="onboardingProvider">
+                        <option value="gptunnel">GPTunnel</option>
+                        <option value="ollama">Ollama Cloud</option>
+                        <option value="custom">Свой OpenAI-compatible</option>
+                    </select>
+                    <input type="url" class="form-control form-control-sm mb-2" id="onboardingCustomBase" placeholder="https://…/v1" hidden>
+                    <div class="kb-onboarding-actions">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-onboarding="back">Назад</button>
+                        <button type="button" class="btn btn-primary btn-sm" data-onboarding="provider-next">Далее</button>
+                    </div>
+                </div>
+                <div class="kb-onboarding-panel ${onboardingState.step === 3 ? 'active' : ''}" data-step="3">
+                    <p class="mb-2" id="onboardingKeyLead">Введите API-ключ провайдера.</p>
+                    <p class="small mb-2" id="onboardingReferral" hidden>Нет аккаунта? <a href="${gptRef}" target="_blank" rel="noopener">Регистрация в GPTunnel</a></p>
+                    <input type="password" class="form-control form-control-sm mb-2" id="onboardingApiKey" autocomplete="off" placeholder="API-ключ">
+                    <div class="kb-onboarding-actions">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-onboarding="back">Назад</button>
+                        <button type="button" class="btn btn-primary btn-sm" data-onboarding="key-next">Далее</button>
+                    </div>
+                </div>
+                <div class="kb-onboarding-panel ${onboardingState.step === 4 ? 'active' : ''}" data-step="4">
+                    <p class="mb-2">Выберите модель (запрос <code>/v1/models</code>):</p>
+                    <div class="input-group input-group-sm mb-2">
+                        <select class="form-select" id="onboardingModelSelect"></select>
+                        <button type="button" class="btn btn-outline-secondary" data-onboarding="load-models">Обновить</button>
+                    </div>
+                    <input type="text" class="form-control form-control-sm mb-2" id="onboardingModelManual" placeholder="id модели">
+                    <p class="small text-muted mb-0" id="onboardingModelStatus"></p>
+                    <div class="kb-onboarding-actions">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-onboarding="back">Назад</button>
+                        <button type="button" class="btn btn-primary btn-sm" data-onboarding="finish">Сохранить и начать</button>
+                    </div>
+                </div>
+            `;
+            void onboardingHydrateStepUi();
+        }
+
+        async function onboardingHydrateStepUi() {
+            const info = await onboardingEnsureWorkspaceInfo();
+            const hint = document.getElementById('onboardingWorkspaceHint');
+            const pathInput = document.getElementById('onboardingWorkspacePath');
+            if (hint) {
+                hint.textContent = `Рекомендуемая папка: ${info.defaultRoot}. Текущая: ${info.root}.`;
+            }
+            if (pathInput && !onboardingState.workspacePath) {
+                onboardingState.workspacePath = info.defaultRoot || info.root;
+                pathInput.value = onboardingState.workspacePath;
+            }
+            const providerSel = document.getElementById('onboardingProvider');
+            if (providerSel) {
+                providerSel.value = onboardingState.provider;
+                providerSel.addEventListener('change', () => {
+                    onboardingState.provider = providerSel.value;
+                    const custom = document.getElementById('onboardingCustomBase');
+                    const preset = window.HarnessAgent.applyProviderPreset(onboardingState.provider);
+                    if (custom) {
+                        custom.hidden = onboardingState.provider === 'gptunnel';
+                        if (!custom.hidden && preset.apiBase) custom.value = preset.apiBase;
+                    }
+                    const ref = document.getElementById('onboardingReferral');
+                    if (ref) ref.hidden = onboardingState.provider !== 'gptunnel';
+                });
+                providerSel.dispatchEvent(new Event('change'));
+            }
+            const keyInput = document.getElementById('onboardingApiKey');
+            if (keyInput && onboardingState.apiKey) keyInput.value = onboardingState.apiKey;
+            const modelManual = document.getElementById('onboardingModelManual');
+            if (modelManual) modelManual.value = onboardingState.model;
+            fillModelSelectOptions(onboardingState.models, onboardingState.model);
+            const modelSelect = document.getElementById('onboardingModelSelect');
+            if (modelSelect) {
+                modelSelect.innerHTML = document.getElementById('openAiModelSelect')?.innerHTML
+                    || `<option value="">— обновите список —</option>`;
+            }
+        }
+
+        async function onboardingLoadModels() {
+            const status = document.getElementById('onboardingModelStatus');
+            const preset = window.HarnessAgent.applyProviderPreset(onboardingState.provider);
+            const customBase = document.getElementById('onboardingCustomBase');
+            const apiBase = onboardingState.provider === 'custom'
+                ? (customBase?.value.trim() || '')
+                : preset.apiBase;
+            const key = document.getElementById('onboardingApiKey')?.value.trim() || onboardingState.apiKey;
+            if (!key) {
+                if (status) status.textContent = 'Сначала введите API-ключ.';
+                return;
+            }
+            if (status) status.textContent = 'Загрузка моделей…';
+            const { models, error } = await window.HarnessAgent.fetchLlmModels(apiBase, key);
+            onboardingState.models = models;
+            if (error) {
+                if (status) status.textContent = error;
+                return;
+            }
+            if (status) status.textContent = `Найдено моделей: ${models.length}`;
+            const sel = document.getElementById('onboardingModelSelect');
+            if (sel) {
+                sel.innerHTML = models.map((id) => `<option value="${id.replace(/"/g, '&quot;')}">${id}</option>`).join('');
+                if (models.length && !onboardingState.model) {
+                    onboardingState.model = models[0];
+                }
+                if (onboardingState.model) sel.value = onboardingState.model;
+            }
+        }
+
+        async function maybeStartOnboarding() {
+            if (!harnessAgentMode() || isDemoMode()) return;
+            if (!window.HarnessAgent?.needsFirstRunSetup?.()) return;
+            setComposeDisabledForOnboarding(true);
+            renderOnboardingWizard();
+        }
+
+        async function finishOnboarding() {
+            const preset = window.HarnessAgent.applyProviderPreset(onboardingState.provider);
+            const customBase = document.getElementById('onboardingCustomBase');
+            const apiBase = onboardingState.provider === 'custom'
+                ? (customBase?.value.trim() || '')
+                : preset.apiBase;
+            const model = document.getElementById('onboardingModelManual')?.value.trim()
+                || document.getElementById('onboardingModelSelect')?.value
+                || onboardingState.model
+                || preset.defaultModel;
+            const path = document.getElementById('onboardingWorkspacePath')?.value.trim()
+                || onboardingState.workspacePath;
+            if (path) {
+                await window.HarnessAgent.invoke1cTool('harness_workspace_set', { path });
+            }
+            await window.HarnessAgent.completeFirstRunSetup({
+                provider: onboardingState.provider,
+                apiBase,
+                apiStyle: preset.apiStyle,
+                model,
+                apiKey: onboardingState.apiKey,
+            });
+            destroyOnboardingWizard();
+            setComposeDisabledForOnboarding(false);
+            await loadAgentConnectionSettings();
+            showStatus('Первичная настройка сохранена. Можно писать в чат.', 'success');
+        }
+
+        function handleOnboardingClick(event) {
+            const btn = event.target.closest('[data-onboarding]');
+            if (!btn) return;
+            const action = btn.dataset.onboarding;
+            if (action === 'workspace-default') {
+                void onboardingEnsureWorkspaceInfo().then((info) => {
+                    onboardingState.workspacePath = info.defaultRoot;
+                    const pathInput = document.getElementById('onboardingWorkspacePath');
+                    if (pathInput) pathInput.value = info.defaultRoot;
+                });
+                return;
+            }
+            if (action === 'workspace-next') {
+                const pathInput = document.getElementById('onboardingWorkspacePath');
+                onboardingState.workspacePath = pathInput?.value.trim() || onboardingState.workspacePath;
+                onboardingState.step = 2;
+                renderOnboardingStep();
+                return;
+            }
+            if (action === 'back') {
+                onboardingState.step = Math.max(1, onboardingState.step - 1);
+                renderOnboardingStep();
+                return;
+            }
+            if (action === 'provider-next') {
+                const providerSel = document.getElementById('onboardingProvider');
+                onboardingState.provider = providerSel?.value || 'gptunnel';
+                onboardingState.step = 3;
+                renderOnboardingStep();
+                return;
+            }
+            if (action === 'key-next') {
+                onboardingState.apiKey = document.getElementById('onboardingApiKey')?.value.trim() || '';
+                if (!onboardingState.apiKey) {
+                    showStatus('Введите API-ключ.', 'warning');
+                    return;
+                }
+                onboardingState.step = 4;
+                renderOnboardingStep();
+                void onboardingLoadModels();
+                return;
+            }
+            if (action === 'load-models') {
+                void onboardingLoadModels();
+                return;
+            }
+            if (action === 'finish') {
+                onboardingState.apiKey = document.getElementById('onboardingApiKey')?.value.trim() || onboardingState.apiKey;
+                onboardingState.model = document.getElementById('onboardingModelManual')?.value.trim()
+                    || document.getElementById('onboardingModelSelect')?.value
+                    || onboardingState.model;
+                void finishOnboarding();
+            }
         }
         function harnessAgentMode() {
             return window.HarnessAgent?.enabled?.() !== false;
@@ -6060,7 +6589,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             configureMarked();
             initContextMeterTooltip();
             const cfg = window.HarnessAgent?.getAgentConfig?.();
-            showStatus(`Агент: ${cfg?.model || 'gemma4:31b-cloud'} (OpenAI API), инструменты → мост 1С.`, 'info');
+            showStatus(`Агент: ${cfg?.model || 'qwen3-8b'} (OpenAI API), инструменты → мост 1С.`, 'info');
             const demoMode = isDemoMode();
             if (demoMode) seedDemoSessionsIfNeeded();
             try {
@@ -6074,6 +6603,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             } else {
                 startNewSession();
             }
+            await maybeStartOnboarding();
             updateSendButtonState();
             updateComposeContext();
             updateContextMeter();
@@ -6358,6 +6888,10 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             elements.sendButton.addEventListener('click', activateSend);
             elements.newChatBtn.addEventListener('click', () => { startNewSession(); });
             elements.chatContainer.addEventListener('click', (event) => {
+                if (event.target.closest('[data-onboarding]')) {
+                    handleOnboardingClick(event);
+                    return;
+                }
                 const btn = event.target.closest('[data-harness-action]');
                 if (!btn) return;
                 const action = btn.dataset.harnessAction;
@@ -6415,6 +6949,21 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
                 });
                 elements.contextWindow.addEventListener('input', updateContextMeter);
             }
+            if (elements.llmProviderPreset) {
+                elements.llmProviderPreset.addEventListener('change', () => {
+                    void applyProviderPresetToForm(elements.llmProviderPreset.value, true);
+                });
+            }
+            if (elements.refreshModelsBtn) {
+                elements.refreshModelsBtn.addEventListener('click', () => { void refreshModelsInSettings(); });
+            }
+            if (elements.openAiModelSelect) {
+                elements.openAiModelSelect.addEventListener('change', () => {
+                    const v = elements.openAiModelSelect.value;
+                    if (v && elements.openAiModel) elements.openAiModel.value = v;
+                    void saveAgentConnectionSettings();
+                });
+            }
             if (elements.openAiBaseUrl) elements.openAiBaseUrl.addEventListener('change', saveAgentConnectionSettings);
             if (elements.openAiModel) elements.openAiModel.addEventListener('change', saveAgentConnectionSettings);
             if (elements.llmApiStyle) elements.llmApiStyle.addEventListener('change', saveAgentConnectionSettings);
@@ -6452,6 +7001,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             elements.settingsModal.addEventListener('shown.bs.modal', () => {
                 if (elements.paletteSelect) elements.paletteSelect.value = document.documentElement.getAttribute('data-palette') || 'krabobot';
                 if (elements.brightnessSelect) elements.brightnessSelect.value = document.documentElement.getAttribute('data-bs-theme') || 'light';
+                void loadAgentConnectionSettings();
             });
             elements.sessionsList.addEventListener('click', function(event) {
                 const actionBtn = event.target.closest('[data-session-action]');
@@ -6531,6 +7081,10 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
         function updateSendButtonState() {
             if (currentAbortController) {
                 elements.sendButton.disabled = false;
+                return;
+            }
+            if (onboardingActive) {
+                elements.sendButton.disabled = true;
                 return;
             }
             const isLoading = (elements.headerStatus && elements.headerStatus.querySelector('.kb-status-spinner')) ||
