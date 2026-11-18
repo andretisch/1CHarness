@@ -24,6 +24,7 @@
 			<ExtendedTooltip name="ПолеHTMLРасширеннаяПодсказка" id="3"/>
 			<Events>
 				<Event name="DocumentComplete">ПолеHTMLДокументСформирован</Event>
+				<Event name="OnClick">ПолеHTMLПриНажатии</Event>
 			</Events>
 		</HTMLDocumentField>
 	</ChildItems>
