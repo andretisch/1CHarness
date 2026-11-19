@@ -1,8 +1,11 @@
 ﻿<!DOCTYPE html>
+<!-- saved from url=(0014)about:internet -->
 <html lang="ru" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>window.__harnessScriptOk=true;setTimeout(function(){if(window.__harnessBootOk)return;var t=document.title||"";if(t.indexOf("[JS?]")<0)document.title=t+" [JS?]";var b=document.getElementById("harness-js-boot-fail");if(!b){b=document.createElement("div");b.id="harness-js-boot-fail";b.style.cssText="position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc3545;color:#fff;padding:8px 12px;font:14px sans-serif;text-align:center";b.textContent="1СХарнесс: скрипты не запустились (file://). Проверьте Mark of the Web / политику браузера.";(document.body||document.documentElement).appendChild(b);}},3000);</script>
     <title>1СХарнесс</title>
     <meta name="theme-color" content="#003366">
 <style>
@@ -6875,6 +6878,7 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
             });
         }
         function setupEventListeners() {
+            window.__harnessBootOk = true;
             let sendActivateLock = false;
             const activateSend = (event) => {
                 if (event && event.button != null && event.button !== 0) return;
