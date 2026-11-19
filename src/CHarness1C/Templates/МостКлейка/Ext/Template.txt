@@ -1,0 +1,1 @@
+<script>window.__1CHarnessBackend=true;{{HARNESS_WORKSPACE_VARS}}(function(){function pullInbound(){var el=document.getElementById('harness-1c-inbound');if(!el)return;var raw=el.value||'';if(!raw)return;el.value='';if(window.harnessDeliverResponse){try{window.harnessDeliverResponse(raw);}catch(e){}}}setInterval(pullInbound,300);})();</script>

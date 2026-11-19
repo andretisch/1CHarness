@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script>window.__harnessScriptOk=true;setTimeout(function(){if(window.__harnessBootOk)return;var t=document.title||"";if(t.indexOf("[JS?]")<0)document.title=t+" [JS?]";var b=document.getElementById("harness-js-boot-fail");if(!b){b=document.createElement("div");b.id="harness-js-boot-fail";b.style.cssText="position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc3545;color:#fff;padding:8px 12px;font:14px sans-serif;text-align:center";b.textContent="1СХарнесс: скрипты не запустились (file://). Проверьте Mark of the Web / политику браузера.";(document.body||document.documentElement).appendChild(b);}},3000);</script>
+    <script>window.__harnessScriptOk=true;</script>
     <title>1СХарнесс</title>
     <meta name="theme-color" content="#003366">
 <style>
@@ -2702,7 +2702,12 @@ code.hljs {
     </style>
 </head>
 <body>
-    <div id="harness-1c-bridge" hidden aria-hidden="true"></div>
+    <div id="harness-1c-bridge" style="display:none" aria-hidden="true" data-harness-bridge="1">
+        <input type="hidden" id="harness-1c-cmd" value="" />
+        <textarea id="harness-1c-outbound" style="display:none" aria-hidden="true"></textarea>
+        <textarea id="harness-1c-inbound" style="display:none" aria-hidden="true"></textarea>
+        <button type="button" id="harness-1c-signal" tabindex="-1" aria-hidden="true">.</button>
+    </div>
     <div id="harness-layout" class="kb-layout">
         <header class="kb-top">
             <div class="kb-top-inner">
@@ -4548,11 +4553,20 @@ function installDomBridgeListener() {
 
 function postDomBridge(payload) {
   const json = JSON.stringify(payload);
-  const bridge = document.getElementById('harness-1c-bridge');
-  if (bridge) {
-    bridge.textContent = json;
-    bridge.dataset.seq = String(Date.now());
+  const cmdEl = document.getElementById('harness-1c-cmd');
+  const outEl = document.getElementById('harness-1c-outbound');
+  const sigEl = document.getElementById('harness-1c-signal');
+  if (cmdEl) cmdEl.value = String(payload?.type || 'tool.invoke');
+  if (outEl) outEl.value = json;
+  if (sigEl) {
+    try {
+      sigEl.click();
+    } catch (_) {
+      /* click may fail outside 1C */
+    }
   }
+  const bridge = document.getElementById('harness-1c-bridge');
+  if (bridge) bridge.dataset.seq = String(Date.now());
   try {
     if (window.HarnessNative?.postMessage) window.HarnessNative.postMessage(json);
   } catch (_) { /* not in 1C host */ }
@@ -6116,11 +6130,18 @@ document.dispatchEvent(new CustomEvent('harness-agent-ready'));
         }
         function harnessPostToHost(envelope) {
             const json = JSON.stringify(envelope);
-            const bridge = document.getElementById('harness-1c-bridge');
-            if (bridge) {
-                bridge.textContent = json;
-                bridge.dataset.seq = String(Date.now());
+            const cmdEl = document.getElementById('harness-1c-cmd');
+            const outEl = document.getElementById('harness-1c-outbound');
+            const sigEl = document.getElementById('harness-1c-signal');
+            if (cmdEl) cmdEl.value = String(envelope && envelope.type ? envelope.type : 'chat.completion');
+            if (outEl) outEl.value = json;
+            if (sigEl) {
+                try {
+                    sigEl.click();
+                } catch (e) { /* not in 1C host */ }
             }
+            const bridge = document.getElementById('harness-1c-bridge');
+            if (bridge) bridge.dataset.seq = String(Date.now());
             try {
                 if (window.HarnessNative && typeof window.HarnessNative.postMessage === 'function') {
                     window.HarnessNative.postMessage(json);

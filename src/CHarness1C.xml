@@ -26,6 +26,7 @@
 		<ChildObjects>
 			<Form>Form</Form>
 			<Template>Страница</Template>
+			<Template>МостКлейка</Template>
 		</ChildObjects>
 	</ExternalDataProcessor>
 </MetaDataObject>
